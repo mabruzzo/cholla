@@ -10,6 +10,21 @@
 #include "../io/ParameterMap.h"
 #include "../utils/error_handling.h"
 
+[[noreturn]] void param_details::report_type_err_(const std::string& param, const std::string& str,
+                                                  const std::string& dtype,
+                                                  param_details::type_err type_convert_err) {
+  std::string r = "";
+  using param_details::type_err;
+  switch (type_convert_err) {
+    case type_err::none:         r = ""; break;  // this shouldn't happen
+    case type_err::generic:      r = "invalid value"; break;
+    case type_err::boolean:      r = "boolean values must be \"true\" or \"false\""; break;
+    case type_err::out_of_range: r = "out of range"; break;
+  }
+  CHOLLA_ERROR("error interpretting \"%s\", the value of the \"%s\" parameter, as a %s: %s",
+               str.c_str(), param.c_str(), dtype.c_str(), r.c_str());
+}
+
 param_details::type_err param_details::try_bool_(const std::string& str, bool& val) {
   if (str == "true") {
     val = true;

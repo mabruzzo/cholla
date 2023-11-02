@@ -19,22 +19,12 @@ namespace param_details {
  */
 template<class> inline constexpr bool dummy_false_v_ = false;
 
-/* Kinds of errors from converting parameters to types
- */
+/* Kinds of errors from converting parameters to a type */
 enum class type_err { none, generic, boolean, out_of_range };
 
-[[noreturn]] inline void formatted_type_err_(const std::string& param, const std::string& str,
-                                             const std::string& dtype, type_err type_convert_err) {
-  std::string r = "";
-  switch (type_convert_err) {
-    case type_err::none:         r = ""; break;  // this shouldn't happen
-    case type_err::generic:      r = "invalid value"; break;
-    case type_err::boolean:      r = "boolean values must be \"true\" or \"false\""; break;
-    case type_err::out_of_range: r = "out of range"; break;
-  }
-  CHOLLA_ERROR("error interpretting \"%s\", the value of the \"%s\" parameter, as a %s: %s",
-               str.c_str(), param.c_str(), dtype.c_str(), r.c_str());
-}
+/* function used to actually format/report the error message specified by the type_err enum */
+[[noreturn]] void report_type_err_(const std::string& param, const std::string& str,
+                                   const std::string& dtype, type_err type_convert_err);
 
 /* @{
  * helper functions that try to interpret a string as a given type.
@@ -210,9 +200,9 @@ private:  // private helper methods
     // now do err-handling/value return
     if (err != param_details::type_err::none) {
       if (is_type_check) return {};  // return empty option
-      param_details::formatted_type_err_(param, str, dtype_name, err);
+      param_details::report_type_err_(param, str, dtype_name, err);
     }
-    
+
     if (not is_type_check) (keyvalue_pair->second).accessed = true; // record parameter-access
     return {val};
   }
