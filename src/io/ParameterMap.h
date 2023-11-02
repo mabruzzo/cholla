@@ -1,6 +1,7 @@
 #ifndef PARAMETERMAP_H
 #define PARAMETERMAP_H
 
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <map>
@@ -37,6 +38,17 @@ param_details::type_err try_int64_(const std::string& str, std::int64_t& val);
 param_details::type_err try_double_(const std::string& str, double& val);
 param_details::type_err try_bool_(const std::string& str, bool& val);
 param_details::type_err try_string_(const std::string& str, std::string& val);
+
+// special case to make people's lives easier
+inline param_details::type_err try_int_(const std::string& str, int& val) {
+    std::int64_t tmp;
+    type_err err = try_int64_(str, tmp);
+    if ((err == param_details::type_err::none) and (INT_MIN <= tmp) && (tmp <= INT_MAX)) {
+        val = int(tmp);
+        return type_err::none;
+    }
+    return (err == type_err::none) ? type_err::out_of_range : err;
+}
 /* @} */
 }
 
@@ -49,8 +61,17 @@ param_details::type_err try_string_(const std::string& str, std::string& val);
  *
  * In contrast to formats like TOML, JSON, & YAML, the parameter files don't have syntactic typing
  * (i.e. where the syntax determines formatting). In this sense, the format is more like ini files.
- * As a consequence, we internally store the parameters as strings. When we access them we need
- * to explicitly convert them to the specified type.
+ * As a consequence, we internally store the parameters as strings. The access API explicitly
+ * converts them to the user-specified type.
+ *
+ * \note
+ * We primarily support 4 datatypes: ``bool``, ``std::int64_t``, ``double``, ``std::string``.
+ * - For convenience, we provide support for internally casting values to ``int``.
+ * - We currently do not provide support for internally casting values to ``float``.
+ * The reason for this distinction is that within the overlapping interval of values represented by
+ * both``int`` and ``std::int64_t``, values are represented with equal levels of accuracy. In
+ * contrast, for the overlapping interval of values represented by both ``float`` and ``double``,
+ * the latter represents some values with greater accuracy.
  */
 class ParameterMap {
 
@@ -82,7 +103,7 @@ public:  // interface methods
   /* queries whether the parameter exists and if it has the specified type.
    *
    * \note
-   * As lThe result is always ``true``, when ``T`` is ``std::string``.
+   * The result is always the same as ``has_param``, when ``T`` is ``std::string``.
    */
   template<typename T>
   bool param_has_type(const std::string& param) {
@@ -114,22 +135,21 @@ public:  // interface methods
    * \param default_val The value to return in case the parameter was not defined.
    *
    * \note
-   * This is named after std::optional::value_or. We could probably acheive the same behavior with a
-   * single template, but this is good enough for now!
+   * This is named after std::optional::value_or. It's my intention to replace this with a single
+   * template, but this is good enough for now!
+   *
+   * \note
+   * Except when considering strings, the return type is always the same as the default value
    */
   bool value_or(const std::string& param, bool default_val) {
     return try_get_<bool>(param, false).value_or(default_val);
   }
 
-  std::int64_t value_or(const std::string& param, int default_val) {
-    return try_get_<std::int64_t>(param, false).value_or(default_val);
+  int value_or(const std::string& param, int default_val) {
+    return try_get_<int>(param, false).value_or(default_val);
   }
 
-  std::int64_t value_or(const std::string& param, long default_val) {
-    return try_get_<std::int64_t>(param, false).value_or(default_val);
-  }
-
-  std::int64_t value_or(const std::string& param, long long default_val) {
+  std::int64_t value_or(const std::string& param, std::int64_t default_val) {
     return try_get_<std::int64_t>(param, false).value_or(default_val);
   }
 
@@ -169,44 +189,52 @@ private:  // private helper methods
    * have).
    */
   template<typename T>
-  std::optional<T> try_get_(const std::string& param, bool is_type_check) {
-    auto keyvalue_pair = entries_.find(param);
-    if (keyvalue_pair == entries_.end()) return {}; // return emtpy option
-
-    const std::string& str = (keyvalue_pair->second).param_str;  // string associate with param
-
-    // convert the string to the specified type and store it in out
-    T val; // default constructed
-    param_details::type_err err{}; // reports errors
-    const char* dtype_name;  // for formatting errors (we use a const char* rather than a
-                             // std::string so we can hold string-literals)
-    if constexpr (std::is_same_v<T, bool>) {
-      err = param_details::try_bool_(str, val);
-      dtype_name = "bool";
-    } else if constexpr (std::is_same_v<T, std::int64_t>) {
-      err = param_details::try_int64_(str, val);
-      dtype_name = "int64_t";
-    } else if constexpr (std::is_same_v<T, double>) {
-      err = param_details::try_double_(str, val);
-      dtype_name = "double";
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      err = param_details::try_string_(str, val);
-      dtype_name = "string";
-    } else {
-      static_assert(param_details::dummy_false_v_<T>,
-                    "The template type can only be bool, std::int64_t, double, or std::string.");
-    }
-
-    // now do err-handling/value return
-    if (err != param_details::type_err::none) {
-      if (is_type_check) return {};  // return empty option
-      param_details::report_type_err_(param, str, dtype_name, err);
-    }
-
-    if (not is_type_check) (keyvalue_pair->second).accessed = true; // record parameter-access
-    return {val};
-  }
+  std::optional<T> try_get_(const std::string& param, bool is_type_check);
 
 };
+
+template<typename T>
+std::optional<T> ParameterMap::try_get_(const std::string& param, bool is_type_check) {
+  auto keyvalue_pair = entries_.find(param);
+  if (keyvalue_pair == entries_.end()) return {}; // return emtpy option
+
+  const std::string& str = (keyvalue_pair->second).param_str;  // string associate with param
+
+  // convert the string to the specified type and store it in out
+  T val{}; // default constructed
+  param_details::type_err err{}; // reports errors
+  const char* dtype_name;  // used for formatting errors (we use a const char* rather than a
+                           // std::string so we can hold string-literals)
+
+  // The branch of the following if-statement is picked at compile-time
+  if constexpr (std::is_same_v<T, bool>) {
+    err = param_details::try_bool_(str, val);
+    dtype_name = "bool";
+  } else if constexpr (std::is_same_v<T, std::int64_t>) {
+    err = param_details::try_int64_(str, val);
+    dtype_name = "int64_t";
+  } else if constexpr (std::is_same_v<T, double>) {
+    err = param_details::try_double_(str, val);
+    dtype_name = "double";
+  } else if constexpr (std::is_same_v<T, std::string>) {
+    err = param_details::try_string_(str, val);
+    dtype_name = "string";
+  } else if constexpr (std::is_same_v<T, int>) {
+    err = param_details::try_int_(str, val);
+    dtype_name = "int";
+  } else {
+    static_assert(param_details::dummy_false_v_<T>,
+                  "template type can only be bool, int, std::int64_t, double, or std::string.");
+  }
+
+  // now do err-handling/value return
+  if (err != param_details::type_err::none) {
+    if (is_type_check) return {};  // return empty option
+    param_details::report_type_err_(param, str, dtype_name, err);
+  }
+
+  if (not is_type_check) (keyvalue_pair->second).accessed = true; // record parameter-access
+  return {val};
+}
 
 #endif /* PARAMETERMAP_H */

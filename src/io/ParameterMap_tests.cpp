@@ -78,7 +78,8 @@ TEST(tALLParameterMap, Methodparam_has_type) {
 
   const char * CONTENTS = R"LITERAL(
 # My sample parameters
-tout=50000
+# tout is large enough that it can't be represented by a 32-bit integer
+tout=3000000000
 gamma=1.4
 init=Disk_3D
 xmin=-5
@@ -90,26 +91,35 @@ mypar=true
   std::string temp = "tout";
 
   EXPECT_TRUE(pmap.param_has_type<std::int64_t>("tout"));
+  if (sizeof(int) <= 4){
+    EXPECT_FALSE(pmap.param_has_type<int>("tout"));
+  } else {
+    EXPECT_TRUE(pmap.param_has_type<int>("tout"));
+  }
   EXPECT_FALSE(pmap.param_has_type<bool>("tout"));
   EXPECT_TRUE(pmap.param_has_type<double>("tout"));
   EXPECT_TRUE(pmap.param_has_type<std::string>("tout"));
 
   EXPECT_FALSE(pmap.param_has_type<std::int64_t>("gamma"));
+  EXPECT_FALSE(pmap.param_has_type<int>("gamma"));
   EXPECT_FALSE(pmap.param_has_type<bool>("gamma"));
   EXPECT_TRUE(pmap.param_has_type<double>("gamma"));
   EXPECT_TRUE(pmap.param_has_type<std::string>("gamma"));
 
   EXPECT_FALSE(pmap.param_has_type<std::int64_t>("init"));
+  EXPECT_FALSE(pmap.param_has_type<int>("init"));
   EXPECT_FALSE(pmap.param_has_type<bool>("init"));
   EXPECT_FALSE(pmap.param_has_type<double>("init"));
   EXPECT_TRUE(pmap.param_has_type<std::string>("init"));
 
   EXPECT_TRUE(pmap.param_has_type<std::int64_t>("xmin"));
+  EXPECT_TRUE(pmap.param_has_type<int>("xmin"));
   EXPECT_FALSE(pmap.param_has_type<bool>("xmin"));
   EXPECT_TRUE(pmap.param_has_type<double>("xmin"));
   EXPECT_TRUE(pmap.param_has_type<std::string>("xmin"));
 
   EXPECT_FALSE(pmap.param_has_type<std::int64_t>("mypar"));
+  EXPECT_FALSE(pmap.param_has_type<int>("mypar"));
   EXPECT_TRUE(pmap.param_has_type<bool>("mypar"));
   EXPECT_FALSE(pmap.param_has_type<double>("mypar"));
   EXPECT_TRUE(pmap.param_has_type<std::string>("mypar"));
@@ -121,7 +131,7 @@ TEST(tALLParameterMap, Methodvalue) {
   DummyFile dummy = DummyFile(EXAMPLE_FILE_CONTENT_);
   ParameterMap pmap = ParameterMap(dummy.fp, 0, nullptr);
   EXPECT_EQ(pmap.value<std::int64_t>("tout"), 50000);
-  EXPECT_EQ(pmap.value<std::int64_t>("outstep"), 100);
+  EXPECT_EQ(pmap.value<int>("outstep"), 100);
   EXPECT_TRUE(pmap.value<double>("gamma") == std::stod("1.4"));
   EXPECT_TRUE(pmap.value<std::string>("init") == "Disk_3D");
   EXPECT_EQ(pmap.value<std::int64_t>("n_hydro"), 10);
@@ -142,6 +152,10 @@ TEST(tALLParameterMap, Methodvalue_or) {
 
   EXPECT_EQ(pmap.value_or("tout", 7), 50000);
   EXPECT_EQ(pmap.value_or("toutNOTREAL", 7), 7);
+
+  std::int64_t dflt = -3424;
+  EXPECT_EQ(pmap.value_or("tout", dflt), 50000);
+  EXPECT_EQ(pmap.value_or("toutNOTREAL", dflt), dflt);
 
   EXPECT_TRUE(pmap.value_or("init","not-real!") == "Disk_3D");
   EXPECT_TRUE(pmap.value_or("initNOTREAL","not-real!") == "not-real!");
