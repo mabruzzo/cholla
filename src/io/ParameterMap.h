@@ -43,10 +43,10 @@ enum class type_err { none, generic, boolean, out_of_range };
  * true, then the program aborts with an error if the string is the wrong type. When
  * ``type_mismatch_is_err``, this simply returns an empty result.
  */
-std::optional<std::int64_t> try_int64_(const std::string& str, param_details::type_err& err);
-std::optional<double> try_double_(const std::string& str, param_details::type_err& err);
-std::optional<bool> try_bool_(const std::string& str, param_details::type_err& err);
-std::optional<std::string> try_string_(const std::string& str, param_details::type_err& err);
+param_details::type_err try_int64_(const std::string& str, std::int64_t& val);
+param_details::type_err try_double_(const std::string& str, double& val);
+param_details::type_err try_bool_(const std::string& str, bool& val);
+param_details::type_err try_string_(const std::string& str, std::string& val);
 /* @} */
 }
 
@@ -124,8 +124,8 @@ public:  // interface methods
    * \param default_val The value to return in case the parameter was not defined.
    *
    * \note
-   * This is named after std::optional::value_or. Since the return type is commonly inferred from
-   * default_val, use std::remove_cv_t to ensure nice behavior (if default_val is const).
+   * This is named after std::optional::value_or. We could probably acheive the same behavior with a
+   * single template, but this is good enough for now!
    */
   bool value_or(const std::string& param, bool default_val) {
     return try_get_<bool>(param, false).value_or(default_val);
@@ -181,42 +181,40 @@ private:  // private helper methods
   template<typename T>
   std::optional<T> try_get_(const std::string& param, bool is_type_check) {
     auto keyvalue_pair = entries_.find(param);
-    if (keyvalue_pair == entries_.end()) {
-      return {};
-    }
+    if (keyvalue_pair == entries_.end()) return {}; // return emtpy option
 
     const std::string& str = (keyvalue_pair->second).param_str;  // string associate with param
 
     // convert the string to the specified type and store it in out
-    std::optional<T> out; // default constructed
+    T val; // default constructed
     param_details::type_err err{}; // reports errors
     const char* dtype_name;  // for formatting errors (we use a const char* rather than a
                              // std::string so we can hold string-literals)
     if constexpr (std::is_same_v<T, bool>) {
-      out = param_details::try_bool_(str, err);
+      err = param_details::try_bool_(str, val);
       dtype_name = "bool";
     } else if constexpr (std::is_same_v<T, std::int64_t>) {
-      out = param_details::try_int64_(str, err);
+      err = param_details::try_int64_(str, val);
       dtype_name = "int64_t";
     } else if constexpr (std::is_same_v<T, double>) {
-      out = param_details::try_double_(str, err);
+      err = param_details::try_double_(str, val);
       dtype_name = "double";
     } else if constexpr (std::is_same_v<T, std::string>) {
-      out = param_details::try_string_(str, err);
+      err = param_details::try_string_(str, val);
       dtype_name = "string";
     } else {
       static_assert(param_details::dummy_false_v_<T>,
                     "The template type can only be bool, std::int64_t, double, or std::string.");
     }
 
-    if (is_type_check) {
-      return out; // already empty if there was a type mismatch (NEVER record parameter-access)
-    } else if (err == param_details::type_err::none) {
-      (keyvalue_pair->second).accessed = true; // record that we accessed the parameter
-      return out;
-    } else {
+    // now do err-handling/value return
+    if (err != param_details::type_err::none) {
+      if (is_type_check) return {};  // return empty option
       param_details::formatted_type_err_(param, str, dtype_name, err);
     }
+    
+    if (not is_type_check) (keyvalue_pair->second).accessed = true; // record parameter-access
+    return {val};
   }
 
 };

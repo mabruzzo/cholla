@@ -10,70 +10,59 @@
 #include "../io/ParameterMap.h"
 #include "../utils/error_handling.h"
 
-std::optional<bool> param_details::try_bool_(const std::string& str,
-                                             param_details::type_err& err) {
-  err = param_details::type_err::none;
+param_details::type_err param_details::try_bool_(const std::string& str, bool& val) {
   if (str == "true") {
-    return {true};
+    val = true;
   } else if (str == "false") {
-    return {false};
+    val = false;
   } else {
-    err = param_details::type_err::boolean;
-    return {};
+    return param_details::type_err::boolean;
   }
+  return param_details::type_err::none;
 }
 
-std::optional<std::int64_t> param_details::try_int64_(const std::string& str,
-                                                      param_details::type_err& err) {
+param_details::type_err param_details::try_int64_(const std::string& str, std::int64_t& val) {
   char* ptr_end{};
   errno = 0;  // reset errno to 0 (prior library calls could have set it to an arbitrary value)
-  long long val = std::strtoll(str.data(), &ptr_end, 10);  // the last arg specifies base-10
+  long long tmp = std::strtoll(str.data(), &ptr_end, 10);  // the last arg specifies base-10
 
   if (errno == ERANGE) {  // deal with errno first, so we don't accidentally overwrite it
     // - non-zero vals other than ERANGE are implementation-defined (plus, the info is redundant)
-    err = param_details::type_err::out_of_range;
+    return param_details::type_err::out_of_range;
   } else if ((str.data() + str.size()) != ptr_end) {
     // when str.data() == ptr_end, then no conversion was performed.
     // when (str.data() + str.size()) != ptr_end, str could hold a float or look like "123abc"
-    err == param_details::type_err::generic;
+    return param_details::type_err::generic;
 #if (LLONG_MIN != INT64_MIN) || (LLONG_MAX != INT64_MAX)
-  } else if (val >= INT64_MIN) && (val <= INT64_MAX) {
-    err = param_details::type_err::out_of_range;
+  } else if (tmp < INT64_MIN) && (tmp > INT64_MAX) {
+    return param_details::type_err::out_of_range;
 #endif
-  } else {
-    err == param_details::type_err::none;
-    return {std::int64_t(val)};
   }
-  return {};
+  val = std::int64_t(tmp);
+  return param_details::type_err::none;
 }
 
-std::optional<double> param_details::try_double_(const std::string& str,
-                                                 param_details::type_err& err) {
+param_details::type_err param_details::try_double_(const std::string& str, double& val) {
   char* ptr_end{};
   errno = 0;  // reset errno to 0 (prior library calls could have set it to an arbitrary value)
-  double val = std::strtod(str.data(), &ptr_end);
+  val = std::strtod(str.data(), &ptr_end);
 
   if (errno == ERANGE) {  // deal with errno first, so we don't accidentally overwrite it
     // - non-zero vals other than ERANGE are implementation-defined (plus, the info is redundant)
-    err = param_details::type_err::out_of_range;
+    return param_details::type_err::out_of_range;
   } else if ((str.data() + str.size()) != ptr_end) {
     // when str.data() == ptr_end, then no conversion was performed.
     // when (str.data() + str.size()) != ptr_end, str could look like "123abc"
-    err == param_details::type_err::generic;
-  } else {
-    err = param_details::type_err::none;
-    return {val};
+    return param_details::type_err::generic;
   }
-  return {};
+  return param_details::type_err::none;
 }
 
-std::optional<std::string> param_details::try_string_(const std::string& str,
-                                                      param_details::type_err& err) {
+param_details::type_err param_details::try_string_(const std::string& str, std::string& val) {
   // mostly just exists for consistency (every parameter can be considered a string)
   // note: we may want to consider removing surrounding quotation marks in the future
-  err = param_details::type_err::none;
-  std::string copy = str;  // we make a copy for the sake of consistency
-  return {copy};
+  val = str;  // we make a copy for the sake of consistency
+  return param_details::type_err::none;
 }
 
 /*! \brief Gets rid of trailing and leading whitespace. */
