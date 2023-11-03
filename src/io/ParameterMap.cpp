@@ -1,87 +1,99 @@
+#include "../io/ParameterMap.h"
+
 #include <cctype>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
-
 #include <string>
 
-#include "../global/global.h" // MAXLEN
-#include "../io/io.h" // chprintf
-#include "../io/ParameterMap.h"
+#include "../global/global.h"  // MAXLEN
+#include "../io/io.h"          // chprintf
 #include "../utils/error_handling.h"
 
-[[noreturn]] void param_details::report_type_err_(const std::string& param, const std::string& str,
-                                                  const std::string& dtype,
-                                                  param_details::type_err type_convert_err) {
-  std::string r = "";
-  using param_details::type_err;
+[[noreturn]] void param_details::Report_TypeErr_(const std::string& param, const std::string& str,
+                                                 const std::string& dtype, param_details::TypeErr type_convert_err)
+{
+  std::string r;
+  using param_details::TypeErr;
   switch (type_convert_err) {
-    case type_err::none:         r = ""; break;  // this shouldn't happen
-    case type_err::generic:      r = "invalid value"; break;
-    case type_err::boolean:      r = "boolean values must be \"true\" or \"false\""; break;
-    case type_err::out_of_range: r = "out of range"; break;
+    case TypeErr::none:
+      r = "";
+      break;  // this shouldn't happen
+    case TypeErr::generic:
+      r = "invalid value";
+      break;
+    case TypeErr::boolean:
+      r = R"(boolean values must be "true" or "false")";
+      break;
+    case TypeErr::out_of_range:
+      r = "out of range";
+      break;
   }
-  CHOLLA_ERROR("error interpretting \"%s\", the value of the \"%s\" parameter, as a %s: %s",
-               str.c_str(), param.c_str(), dtype.c_str(), r.c_str());
+  CHOLLA_ERROR("error interpretting \"%s\", the value of the \"%s\" parameter, as a %s: %s", str.c_str(), param.c_str(),
+               dtype.c_str(), r.c_str());
 }
 
-param_details::type_err param_details::try_bool_(const std::string& str, bool& val) {
+param_details::TypeErr param_details::try_bool_(const std::string& str, bool& val)
+{
   if (str == "true") {
     val = true;
   } else if (str == "false") {
     val = false;
   } else {
-    return param_details::type_err::boolean;
+    return param_details::TypeErr::boolean;
   }
-  return param_details::type_err::none;
+  return param_details::TypeErr::none;
 }
 
-param_details::type_err param_details::try_int64_(const std::string& str, std::int64_t& val) {
+param_details::TypeErr param_details::try_int64_(const std::string& str, std::int64_t& val)
+{
   char* ptr_end{};
-  errno = 0;  // reset errno to 0 (prior library calls could have set it to an arbitrary value)
+  errno         = 0;  // reset errno to 0 (prior library calls could have set it to an arbitrary value)
   long long tmp = std::strtoll(str.data(), &ptr_end, 10);  // the last arg specifies base-10
 
   if (errno == ERANGE) {  // deal with errno first, so we don't accidentally overwrite it
     // - non-zero vals other than ERANGE are implementation-defined (plus, the info is redundant)
-    return param_details::type_err::out_of_range;
+    return param_details::TypeErr::out_of_range;
   } else if ((str.data() + str.size()) != ptr_end) {
     // when str.data() == ptr_end, then no conversion was performed.
     // when (str.data() + str.size()) != ptr_end, str could hold a float or look like "123abc"
-    return param_details::type_err::generic;
+    return param_details::TypeErr::generic;
 #if (LLONG_MIN != INT64_MIN) || (LLONG_MAX != INT64_MAX)
-  } else if (tmp < INT64_MIN) && (tmp > INT64_MAX) {
-    return param_details::type_err::out_of_range;
+  } else if ((tmp < INT64_MIN) and (tmp > INT64_MAX)) {
+    return param_details::TypeErr::out_of_range;
 #endif
   }
   val = std::int64_t(tmp);
-  return param_details::type_err::none;
+  return param_details::TypeErr::none;
 }
 
-param_details::type_err param_details::try_double_(const std::string& str, double& val) {
+param_details::TypeErr param_details::try_double_(const std::string& str, double& val)
+{
   char* ptr_end{};
   errno = 0;  // reset errno to 0 (prior library calls could have set it to an arbitrary value)
-  val = std::strtod(str.data(), &ptr_end);
+  val   = std::strtod(str.data(), &ptr_end);
 
   if (errno == ERANGE) {  // deal with errno first, so we don't accidentally overwrite it
     // - non-zero vals other than ERANGE are implementation-defined (plus, the info is redundant)
-    return param_details::type_err::out_of_range;
+    return param_details::TypeErr::out_of_range;
   } else if ((str.data() + str.size()) != ptr_end) {
     // when str.data() == ptr_end, then no conversion was performed.
     // when (str.data() + str.size()) != ptr_end, str could look like "123abc"
-    return param_details::type_err::generic;
+    return param_details::TypeErr::generic;
   }
-  return param_details::type_err::none;
+  return param_details::TypeErr::none;
 }
 
-param_details::type_err param_details::try_string_(const std::string& str, std::string& val) {
+param_details::TypeErr param_details::try_string_(const std::string& str, std::string& val)
+{
   // mostly just exists for consistency (every parameter can be considered a string)
   // note: we may want to consider removing surrounding quotation marks in the future
   val = str;  // we make a copy for the sake of consistency
-  return param_details::type_err::none;
+  return param_details::TypeErr::none;
 }
 
 /*! \brief Gets rid of trailing and leading whitespace. */
-static char * my_trim(char *s)
+static char* my_trim(char* s)
 {
   /* Initialize start, end pointers */
   char *s1 = s, *s2 = &s[strlen(s) - 1];
@@ -102,12 +114,12 @@ static char * my_trim(char *s)
   return s;
 }
 
-ParameterMap::ParameterMap(std::FILE* fp, int argc, char **argv) {
+ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
+{
   int buf;
   char *s, buff[256];
 
-  CHOLLA_ASSERT(fp != nullptr,
-                "ParameterMap was passed a nullptr rather than an actual file object");
+  CHOLLA_ASSERT(fp != nullptr, "ParameterMap was passed a nullptr rather than an actual file object");
 
   /* Read next line */
   while ((s = fgets(buff, sizeof buff, fp)) != NULL) {
@@ -133,7 +145,6 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char **argv) {
     my_trim(value);
     entries_[std::string(name)] = {std::string(value), false};
   }
-  
 
   // Parse overriding args from command line
   for (int i = 0; i < argc; ++i) {
@@ -155,12 +166,12 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char **argv) {
   }
 }
 
-int ParameterMap::warn_unused_parameters(const std::set<std::string>& ignore_params,
-                                         bool abort_on_warning, bool suppress_warning_msg) const {
-
+int ParameterMap::warn_unused_parameters(const std::set<std::string>& ignore_params, bool abort_on_warning,
+                                         bool suppress_warning_msg) const
+{
   int unused_params = 0;
   for (const auto& kv_pair : entries_) {
-    const std::string& name = kv_pair.first;
+    const std::string& name                     = kv_pair.first;
     const ParameterMap::ParamEntry& param_entry = kv_pair.second;
 
     if ((not param_entry.accessed) and (ignore_params.find(name) == ignore_params.end())) {

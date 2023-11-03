@@ -13,19 +13,21 @@
 #include "../utils/error_handling.h"
 
 // stuff inside this namespace is only meant to be used to implement ParameterMap
-namespace param_details {
+namespace param_details
+{
 
 /* defining a construct like this is a common workaround used to raise a compile-time error in the
  * else-branch of a constexpr-if statement. This is used to implement ``ParameterMap::try_get_``
  */
-template<class> inline constexpr bool dummy_false_v_ = false;
+template <class>
+inline constexpr bool dummy_false_v_ = false;
 
 /* Kinds of errors from converting parameters to a type */
-enum class type_err { none, generic, boolean, out_of_range };
+enum class TypeErr { none, generic, boolean, out_of_range };
 
-/* function used to actually format/report the error message specified by the type_err enum */
-[[noreturn]] void report_type_err_(const std::string& param, const std::string& str,
-                                   const std::string& dtype, type_err type_convert_err);
+/* function used to actually format/report the error message specified by the TypeErr enum */
+[[noreturn]] void Report_TypeErr_(const std::string& param, const std::string& str, const std::string& dtype,
+                                  TypeErr type_convert_err);
 
 /* @{
  * helper functions that try to interpret a string as a given type.
@@ -34,23 +36,24 @@ enum class type_err { none, generic, boolean, out_of_range };
  * true, then the program aborts with an error if the string is the wrong type. When
  * ``type_mismatch_is_err``, this simply returns an empty result.
  */
-param_details::type_err try_int64_(const std::string& str, std::int64_t& val);
-param_details::type_err try_double_(const std::string& str, double& val);
-param_details::type_err try_bool_(const std::string& str, bool& val);
-param_details::type_err try_string_(const std::string& str, std::string& val);
+param_details::TypeErr try_int64_(const std::string& str, std::int64_t& val);
+param_details::TypeErr try_double_(const std::string& str, double& val);
+param_details::TypeErr try_bool_(const std::string& str, bool& val);
+param_details::TypeErr try_string_(const std::string& str, std::string& val);
 
 // special case to make people's lives easier
-inline param_details::type_err try_int_(const std::string& str, int& val) {
-    std::int64_t tmp;
-    type_err err = try_int64_(str, tmp);
-    if ((err == param_details::type_err::none) and (INT_MIN <= tmp) && (tmp <= INT_MAX)) {
-        val = int(tmp);
-        return type_err::none;
-    }
-    return (err == type_err::none) ? type_err::out_of_range : err;
+inline param_details::TypeErr try_int_(const std::string& str, int& val)
+{
+  std::int64_t tmp;
+  TypeErr err = try_int64_(str, tmp);
+  if ((err == param_details::TypeErr::none) and (INT_MIN <= tmp) && (tmp <= INT_MAX)) {
+    val = int(tmp);
+    return TypeErr::none;
+  }
+  return (err == TypeErr::none) ? TypeErr::out_of_range : err;
 }
 /* @} */
-}
+}  // namespace param_details
 
 /*!
  * \brief A class that provides map-like access to parameter files.
@@ -73,40 +76,39 @@ inline param_details::type_err try_int_(const std::string& str, int& val) {
  * contrast, for the overlapping interval of values represented by both ``float`` and ``double``,
  * the latter represents some values with greater accuracy.
  */
-class ParameterMap {
+class ParameterMap
+{
+  struct ParamEntry {
+    std::string param_str;
+    bool accessed;
+  };
 
-  struct ParamEntry { std::string param_str; bool accessed; };
-
-private: // attributes
+ private:  // attributes
   std::map<std::string, ParamEntry> entries_;
 
-public:  // interface methods
-
+ public:  // interface methods
   /* Reads parameters from a parameter file and arguments.
-   * 
+   *
    * \note
    * We pass in a ``std::FILE`` object rather than a filename-string because that makes testing
    * easier.
    */
-  ParameterMap(std::FILE* f, int argc, char **argv);
+  ParameterMap(std::FILE* f, int argc, char** argv);
 
   /* queries the number of parameters (mostly for testing purposes) */
-  std::size_t size() {
-    return entries_.size();
-  }
+  std::size_t size() { return entries_.size(); }
 
   /* queries whether the parameter exists. */
-  bool has_param(const std::string& param) {
-    return entries_.find(param) != entries_.end();
-  }
+  bool has_param(const std::string& param) { return entries_.find(param) != entries_.end(); }
 
   /* queries whether the parameter exists and if it has the specified type.
    *
    * \note
    * The result is always the same as ``has_param``, when ``T`` is ``std::string``.
    */
-  template<typename T>
-  bool param_has_type(const std::string& param) {
+  template <typename T>
+  bool param_has_type(const std::string& param)
+  {
     return try_get_<T>(param, true).has_value();
   }
 
@@ -118,8 +120,9 @@ public:  // interface methods
    *
    * \note The name follows conventions of std::optional
    */
-  template<typename T>
-  T value(const std::string& param) {
+  template <typename T>
+  T value(const std::string& param)
+  {
     std::optional<T> result = try_get_<T>(param, false);
     if (not result.has_value()) {
       CHOLLA_ERROR("The \"%s\" parameter was not specified.", param.c_str());
@@ -128,7 +131,7 @@ public:  // interface methods
   }
 
   /* @{
-   * If the specified parameter exists, retrieve the associated value, otherwise return default_val. 
+   * If the specified parameter exists, retrieve the associated value, otherwise return default_val.
    * If the associated value does not have the specified type, the program aborts with an error.
    *
    * \param param The name of the parameter being queried.
@@ -141,27 +144,30 @@ public:  // interface methods
    * \note
    * Except when considering strings, the return type is always the same as the default value
    */
-  bool value_or(const std::string& param, bool default_val) {
+  bool value_or(const std::string& param, bool default_val)
+  {
     return try_get_<bool>(param, false).value_or(default_val);
   }
 
-  int value_or(const std::string& param, int default_val) {
-    return try_get_<int>(param, false).value_or(default_val);
-  }
+  int value_or(const std::string& param, int default_val) { return try_get_<int>(param, false).value_or(default_val); }
 
-  std::int64_t value_or(const std::string& param, std::int64_t default_val) {
+  std::int64_t value_or(const std::string& param, std::int64_t default_val)
+  {
     return try_get_<std::int64_t>(param, false).value_or(default_val);
   }
 
-  double value_or(const std::string& param, double default_val) {
+  double value_or(const std::string& param, double default_val)
+  {
     return try_get_<double>(param, false).value_or(default_val);
   }
 
-  std::string value_or(const std::string& param, const std::string& default_val) {
+  std::string value_or(const std::string& param, const std::string& default_val)
+  {
     return try_get_<std::string>(param, false).value_or(default_val);
   }
 
-  std::string value_or(const std::string& param, const char* default_val) {
+  std::string value_or(const std::string& param, const char* default_val)
+  {
     return try_get_<std::string>(param, false).value_or(default_val);
   }
   /* @} */
@@ -175,65 +181,64 @@ public:  // interface methods
    *    testing purposes)
    * \returns the number of unused parameters
    */
-  int warn_unused_parameters(const std::set<std::string>& ignore_params,
-                             bool abort_on_warning = false,
+  int warn_unused_parameters(const std::set<std::string>& ignore_params, bool abort_on_warning = false,
                              bool suppress_warning_msg = false) const;
 
   /* This is a temporary function to help ease the transition to the new parsing approach. */
-  template<typename LegacyParseParamFn>
-  void pass_entries_to_legacy_parse_param(LegacyParseParamFn &f) {
+  template <typename LegacyParseParamFn>
+  void pass_entries_to_legacy_parse_param(LegacyParseParamFn& f)
+  {
     for (auto& kv_pair : entries_) {
-      const char* name = kv_pair.first.c_str();
+      const char* name  = kv_pair.first.c_str();
       const char* value = (kv_pair.second).param_str.c_str();
 
       // pass the parameter name and (unparsed) value to the legacy function. Record if used.
       bool rslt = f(name, value);
-      if (rslt)  (kv_pair.second).accessed = true;
+      if (rslt) (kv_pair.second).accessed = true;
     }
   }
 
-private:  // private helper methods
-
+ private:  // private helper methods
   /* helper function template that tries to retrieve values associated with a given parameter.
    *
    * This returns the associated value if it exists and has the specified type. The returned
-   * value is empty if the parameter doesn't exist. If the It can also be empty when type_abort is 
+   * value is empty if the parameter doesn't exist. If the It can also be empty when type_abort is
    * ``true`` and the specified type doesn't match the parameter (and is a type a parameter can
    * have).
    */
-  template<typename T>
+  template <typename T>
   std::optional<T> try_get_(const std::string& param, bool is_type_check);
-
 };
 
-template<typename T>
-std::optional<T> ParameterMap::try_get_(const std::string& param, bool is_type_check) {
+template <typename T>
+std::optional<T> ParameterMap::try_get_(const std::string& param, bool is_type_check)
+{
   auto keyvalue_pair = entries_.find(param);
-  if (keyvalue_pair == entries_.end()) return {}; // return emtpy option
+  if (keyvalue_pair == entries_.end()) return {};  // return emtpy option
 
   const std::string& str = (keyvalue_pair->second).param_str;  // string associate with param
 
   // convert the string to the specified type and store it in out
-  T val{}; // default constructed
-  param_details::type_err err{}; // reports errors
-  const char* dtype_name;  // used for formatting errors (we use a const char* rather than a
-                           // std::string so we can hold string-literals)
+  T val{};                       // default constructed
+  param_details::TypeErr err{};  // reports errors
+  const char* dtype_name;        // used for formatting errors (we use a const char* rather than a
+                                 // std::string so we can hold string-literals)
 
   // The branch of the following if-statement is picked at compile-time
   if constexpr (std::is_same_v<T, bool>) {
-    err = param_details::try_bool_(str, val);
+    err        = param_details::try_bool_(str, val);
     dtype_name = "bool";
   } else if constexpr (std::is_same_v<T, std::int64_t>) {
-    err = param_details::try_int64_(str, val);
+    err        = param_details::try_int64_(str, val);
     dtype_name = "int64_t";
   } else if constexpr (std::is_same_v<T, double>) {
-    err = param_details::try_double_(str, val);
+    err        = param_details::try_double_(str, val);
     dtype_name = "double";
   } else if constexpr (std::is_same_v<T, std::string>) {
-    err = param_details::try_string_(str, val);
+    err        = param_details::try_string_(str, val);
     dtype_name = "string";
   } else if constexpr (std::is_same_v<T, int>) {
-    err = param_details::try_int_(str, val);
+    err        = param_details::try_int_(str, val);
     dtype_name = "int";
   } else {
     static_assert(param_details::dummy_false_v_<T>,
@@ -241,12 +246,12 @@ std::optional<T> ParameterMap::try_get_(const std::string& param, bool is_type_c
   }
 
   // now do err-handling/value return
-  if (err != param_details::type_err::none) {
+  if (err != param_details::TypeErr::none) {
     if (is_type_check) return {};  // return empty option
-    param_details::report_type_err_(param, str, dtype_name, err);
+    param_details::Report_TypeErr_(param, str, dtype_name, err);
   }
 
-  if (not is_type_check) (keyvalue_pair->second).accessed = true; // record parameter-access
+  if (not is_type_check) (keyvalue_pair->second).accessed = true;  // record parameter-access
   return {val};
 }
 
