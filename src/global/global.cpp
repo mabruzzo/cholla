@@ -107,7 +107,9 @@ const std::set<std::string> optionalParams = {
     "delta",        "nzr",         "nxr",      "H0",       "Omega_M", "Omega_L", "Init_redshift",
     "End_redshift", "tile_length", "n_proc_x", "n_proc_y", "n_proc_z"};
 
-bool Parse_Param(const char *name, const char *value, struct Parameters *parms);
+bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameters *parms);
+
+void New_Style_Init_Param_Struct_Members(ParameterMap& param, struct Parameters *parms);
 
 /*! \fn void Parse_Params(char *param_file, struct Parameters * parms);
  *  \brief Reads the parameters in the given file into a structure. */
@@ -129,12 +131,16 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
   parms->scale_outputs_file[0] = '\0';
 #endif
 
-  // for now, just use the legacy Parse_Param
+
+  // the plan is eventually replace Old_Style_Parse_Param entirely with 
+  // New_Style_Init_Param_Struct_Members.
   auto fn = [&](const char *name, const char *value) -> bool
-  {return Parse_Param(name, value, parms);};
+  {return Old_Style_Parse_Param(name, value, parms);};
 
   pmap.pass_entries_to_legacy_parse_param(fn);
-  // the plan is to eventually, use the new parsing functions from within Parse_Param
+
+  // the plan is to eventually, use the new parsing functions from Parse_Param like the following
+  New_Style_Init_Param_Struct_Members(pmap, parms);
 
   pmap.warn_unused_parameters(optionalParams);
 
@@ -168,28 +174,10 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
  *
  *  \returns true if the parameter was actually used. false otherwise.
  */
-bool Parse_Param(const char *name, const char *value, struct Parameters *parms)
+bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameters *parms)
 {
   /* Copy into correct entry in parameters struct */
-  if (strcmp(name, "nx") == 0) {
-    parms->nx = atoi(value);
-  } else if (strcmp(name, "ny") == 0) {
-    parms->ny = atoi(value);
-  } else if (strcmp(name, "nz") == 0) {
-    parms->nz = atoi(value);
-#ifdef STATIC_GRAV
-  } else if (strcmp(name, "custom_grav") == 0) {
-    parms->custom_grav = atoi(value);
-#endif
-  } else if (strcmp(name, "tout") == 0) {
-    parms->tout = atof(value);
-  } else if (strcmp(name, "outstep") == 0) {
-    parms->outstep = atof(value);
-  } else if (strcmp(name, "n_steps_output") == 0) {
-    parms->n_steps_output = atoi(value);
-  } else if (strcmp(name, "gamma") == 0) {
-    parms->gamma = atof(value);
-  } else if (strcmp(name, "init") == 0) {
+  if (strcmp(name, "init") == 0) {
     strncpy(parms->init, value, MAXLEN);
   } else if (strcmp(name, "nfile") == 0) {
     parms->nfile = atoi(value);
@@ -457,4 +445,31 @@ bool Parse_Param(const char *name, const char *value, struct Parameters *parms)
     return false;
   }
   return true;
+}
+
+/*! \brief Parses and sets a bunch of members of parms from pmap.
+ *
+ *  The goal is eventually get rid of the old-style function
+ */
+void New_Style_Init_Param_Struct_Members(ParameterMap& pmap, struct Parameters *parms) {
+  // load the domain dimensions (abort with an error if one of these is missing)
+  parms->nx = pmap.value<int>("nx");
+  parms->ny = pmap.value<int>("ny");
+  parms->nz = pmap.value<int>("nz");
+  CHOLLA_ASSERT((parms->nx > 0) and (parms->ny > 0) and (parms->nz > 0),
+                "domain dimensions must be positive");
+
+  #ifdef STATIC_GRAV
+  parms->custom_grav = pmap.value_or("custom_grav", 0);
+  #endif
+
+  parms->tout = pmap.value<double>("tout");  // aborts if missing
+  CHOLLA_ASSERT(parms->tout >= 0.0, "tout parameter must be non-negative");
+
+  parms->outstep = pmap.value<double>("outstep");  // aborts if missing
+  parms->n_steps_output = pmap.value_or("n_steps_output", 0);
+
+  // in the future, maybe we should provide a default value of 5/3 for gamma
+  parms->gamma = Real(pmap.value<double>("gamma"));
+  CHOLLA_ASSERT(parms->gamma > 1.0, "gamma parameter must be greater than one.");
 }
