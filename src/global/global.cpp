@@ -13,6 +13,7 @@
 #include <set>
 
 #include "../io/io.h"                 //defines chprintf
+#include "../io/ParameterMap.h"       // define parameter_map
 #include "../utils/error_handling.h"  // defines ASSERT
 
 /* Global variables */
@@ -120,14 +121,12 @@ int Is_Param_Valid(const char *param_name)
   return 0;
 }
 
-void Parse_Param(char *name, char *value, struct Parameters *parms);
+bool Parse_Param(const char *name, const char *value, struct Parameters *parms);
 
 /*! \fn void Parse_Params(char *param_file, struct Parameters * parms);
  *  \brief Reads the parameters in the given file into a structure. */
 void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **argv)
 {
-  int buf;
-  char *s, buff[256];
   FILE *fp = fopen(param_file, "r");
   if (fp == NULL) {
     chprintf("Exiting at file %s line %d: failed to read param file %s \n", __FILE__, __LINE__, param_file);
@@ -135,56 +134,24 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
     return;
   }
 
+  // read/parse the parameters in the file and cmd-args into pmap
+  ParameterMap pmap(fp, argc, argv);
+  fclose(fp);
+
 #ifdef COSMOLOGY
   // Initialize file name as an empty string
   parms->scale_outputs_file[0] = '\0';
 #endif
 
-  /* Read next line */
-  while ((s = fgets(buff, sizeof buff, fp)) != NULL) {
-    /* Skip blank lines and comments */
-    if (buff[0] == '\n' || buff[0] == '#' || buff[0] == ';') {
-      continue;
-    }
+  // for now, just use the legacy Parse_Param
+  auto fn = [&](const char *name, const char *value) -> bool
+  {return Parse_Param(name, value, parms);};
 
-    /* Parse name/value pair from line */
-    char name[MAXLEN], value[MAXLEN];
-    s = strtok(buff, "=");
-    if (s == NULL) {
-      continue;
-    } else {
-      strncpy(name, s, MAXLEN);
-    }
-    s = strtok(NULL, "=");
-    if (s == NULL) {
-      continue;
-    } else {
-      strncpy(value, s, MAXLEN);
-    }
-    Trim(value);
-    Parse_Param(name, value, parms);
-  }
-  /* Close file */
-  fclose(fp);
+  pmap.pass_entries_to_legacy_parse_param(fn);
+  // the plan is to eventually, use the new parsing functions from within Parse_Param
+  // -> it may be useful to return pmap in the future so that we can use it to initialize individual
+  //    modules
 
-  // Parse overriding args from command line
-  for (int i = 0; i < argc; ++i) {
-    char name[MAXLEN], value[MAXLEN];
-    s = strtok(argv[i], "=");
-    if (s == NULL) {
-      continue;
-    } else {
-      strncpy(name, s, MAXLEN);
-    }
-    s = strtok(NULL, "=");
-    if (s == NULL) {
-      continue;
-    } else {
-      strncpy(value, s, MAXLEN);
-    }
-    Parse_Param(name, value, parms);
-    chprintf("Override with %s=%s\n", name, value);
-  }
 #ifdef TEMPERATURE_FLOOR
   if (parms->temperature_floor == 0) {
     chprintf(
@@ -209,8 +176,11 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
 }
 
 /*! \fn void Parse_Param(char *name,char *value, struct Parameters *parms);
- *  \brief Parses and sets a single param based on name and value. */
-void Parse_Param(char *name, char *value, struct Parameters *parms)
+ *  \brief Parses and sets a single param based on name and value.
+ *
+ *  \returns true if the parameter was actually used. false otherwise.
+ */
+bool Parse_Param(const char *name, const char *value, struct Parameters *parms)
 {
   /* Copy into correct entry in parameters struct */
   if (strcmp(name, "nx") == 0) {
@@ -497,5 +467,8 @@ void Parse_Param(char *name, char *value, struct Parameters *parms)
 #endif
   } else if (!Is_Param_Valid(name)) {
     chprintf("WARNING: %s/%s: Unknown parameter/value pair!\n", name, value);
+  } else {
+    return false;
   }
+  return true;
 }

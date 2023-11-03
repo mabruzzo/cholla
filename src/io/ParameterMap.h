@@ -179,6 +179,19 @@ public:  // interface methods
                              bool abort_on_warning = false,
                              bool suppress_warning_msg = false) const;
 
+  /* This is a temporary function to help ease the transition to the new parsing approach. */
+  template<typename LegacyParseParamFn>
+  void pass_entries_to_legacy_parse_param(LegacyParseParamFn &f) {
+    for (auto& kv_pair : entries_) {
+      const char* name = kv_pair.first.c_str();
+      const char* value = (kv_pair.second).param_str.c_str();
+
+      // pass the parameter name and (unparsed) value to the legacy function. Record if used.
+      bool rslt = f(name, value);
+      if (rslt)  (kv_pair.second).accessed = true;
+    }
+  }
+
 private:  // private helper methods
 
   /* helper function template that tries to retrieve values associated with a given parameter.
