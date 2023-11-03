@@ -12,8 +12,8 @@
 
 #include <set>
 
-#include "../io/io.h"                 //defines chprintf
 #include "../io/ParameterMap.h"       // define parameter_map
+#include "../io/io.h"                 //defines chprintf
 #include "../utils/error_handling.h"  // defines ASSERT
 
 /* Global variables */
@@ -109,7 +109,7 @@ const std::set<std::string> optionalParams = {
 
 bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameters *parms);
 
-void New_Style_Init_Param_Struct_Members(ParameterMap& param, struct Parameters *parms);
+void New_Style_Init_Param_Struct_Members(ParameterMap &param, struct Parameters *parms);
 
 /*! \fn void Parse_Params(char *param_file, struct Parameters * parms);
  *  \brief Reads the parameters in the given file into a structure. */
@@ -131,11 +131,9 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
   parms->scale_outputs_file[0] = '\0';
 #endif
 
-
-  // the plan is eventually replace Old_Style_Parse_Param entirely with 
+  // the plan is eventually replace Old_Style_Parse_Param entirely with
   // New_Style_Init_Param_Struct_Members.
-  auto fn = [&](const char *name, const char *value) -> bool
-  {return Old_Style_Parse_Param(name, value, parms);};
+  auto fn = [&](const char *name, const char *value) -> bool { return Old_Style_Parse_Param(name, value, parms); };
 
   pmap.pass_entries_to_legacy_parse_param(fn);
 
@@ -451,22 +449,22 @@ bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameter
  *
  *  The goal is eventually get rid of the old-style function
  */
-void New_Style_Init_Param_Struct_Members(ParameterMap& pmap, struct Parameters *parms) {
+void New_Style_Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
+{
   // load the domain dimensions (abort with an error if one of these is missing)
   parms->nx = pmap.value<int>("nx");
   parms->ny = pmap.value<int>("ny");
   parms->nz = pmap.value<int>("nz");
-  CHOLLA_ASSERT((parms->nx > 0) and (parms->ny > 0) and (parms->nz > 0),
-                "domain dimensions must be positive");
+  CHOLLA_ASSERT((parms->nx <= 0) or (parms->ny <= 0) or (parms->nz <= 0), "domain dimensions must be positive");
 
-  #ifdef STATIC_GRAV
+#ifdef STATIC_GRAV
   parms->custom_grav = pmap.value_or("custom_grav", 0);
-  #endif
+#endif
 
   parms->tout = pmap.value<double>("tout");  // aborts if missing
   CHOLLA_ASSERT(parms->tout >= 0.0, "tout parameter must be non-negative");
 
-  parms->outstep = pmap.value<double>("outstep");  // aborts if missing
+  parms->outstep        = pmap.value<double>("outstep");  // aborts if missing
   parms->n_steps_output = pmap.value_or("n_steps_output", 0);
 
   // in the future, maybe we should provide a default value of 5/3 for gamma
