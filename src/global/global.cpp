@@ -102,24 +102,10 @@ char *Trim(char *s)
 }
 
 // NOLINTNEXTLINE(cert-err58-cpp)
-const std::set<const char *> optionalParams = {
+const std::set<std::string> optionalParams = {
     "flag_delta",   "ddelta_dt",   "n_delta",  "Lz",       "Lx",      "phi",     "theta",
     "delta",        "nzr",         "nxr",      "H0",       "Omega_M", "Omega_L", "Init_redshift",
     "End_redshift", "tile_length", "n_proc_x", "n_proc_y", "n_proc_z"};
-
-/*! \fn int Is_Param_Valid(char *name);
- * \brief Verifies that a param is valid (even if not needed).  Avoids
- * "warnings" in output. */
-int Is_Param_Valid(const char *param_name)
-{
-  // for (auto optionalParam = optionalParams.begin(); optionalParam != optionalParams.end(); ++optionalParam) {
-  for (const auto *optionalParam : optionalParams) {
-    if (strcmp(param_name, optionalParam) == 0) {
-      return 1;
-    }
-  }
-  return 0;
-}
 
 bool Parse_Param(const char *name, const char *value, struct Parameters *parms);
 
@@ -149,8 +135,8 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
 
   pmap.pass_entries_to_legacy_parse_param(fn);
   // the plan is to eventually, use the new parsing functions from within Parse_Param
-  // -> it may be useful to return pmap in the future so that we can use it to initialize individual
-  //    modules
+
+  pmap.warn_unused_parameters(optionalParams);
 
 #ifdef TEMPERATURE_FLOOR
   if (parms->temperature_floor == 0) {
@@ -173,6 +159,8 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
         "parameter file.\n");
   }
 #endif
+
+  // it may be useful to return pmap in the future so that we can use it to initialize individual modules
 }
 
 /*! \fn void Parse_Param(char *name,char *value, struct Parameters *parms);
@@ -465,8 +453,6 @@ bool Parse_Param(const char *name, const char *value, struct Parameters *parms)
     parms->grain_radius = atoi(value);
   #endif
 #endif
-  } else if (!Is_Param_Valid(name)) {
-    chprintf("WARNING: %s/%s: Unknown parameter/value pair!\n", name, value);
   } else {
     return false;
   }
