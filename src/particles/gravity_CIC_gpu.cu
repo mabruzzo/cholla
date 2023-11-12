@@ -113,9 +113,14 @@ void Particles_3D::Get_Gravity_Field_Particles_GPU_function(int nx_local, int ny
     #endif
 
   int nx_g, ny_g, nz_g;
-  nx_g = nx_local + 2 * N_GHOST_POTENTIAL;
-  ny_g = ny_local + 2 * N_GHOST_POTENTIAL;
-  nz_g = nz_local + 2 * N_GHOST_POTENTIAL;
+# ifdef N_GHOST_POTENTIAL
+  const int n_ghost_potential = N_GHOST_POTENTIAL;
+#else
+  const int n_ghost_potential = 0;
+#endif
+  nx_g = nx_local + 2 * n_ghost_potential;
+  ny_g = ny_local + 2 * n_ghost_potential;
+  nz_g = nz_local + 2 * n_ghost_potential;
 
   // set values for GPU kernels
   int tpb_x   = 8;
@@ -131,7 +136,7 @@ void Particles_3D::Get_Gravity_Field_Particles_GPU_function(int nx_local, int ny
 
   hipLaunchKernelGGL(Get_Gravity_Field_Particles_Kernel, dim3dGrid, dim3dBlock, 0, 0, potential_dev, gravity_x_dev,
                      gravity_y_dev, gravity_z_dev, nx_local, ny_local, nz_local, n_ghost_particles_grid,
-                     N_GHOST_POTENTIAL, dx, dy, dz);
+                     n_ghost_potential, dx, dy, dz);
   CudaCheckError();
 }
 

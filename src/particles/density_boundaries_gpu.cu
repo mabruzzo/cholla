@@ -1,4 +1,4 @@
-#if defined(PARTICLES_GPU) && defined(GRAVITY_GPU)
+#if defined(PARTICLES_GPU)
 
   #include <iostream>
 
@@ -276,4 +276,4 @@ void Grid3D::Unload_Particles_Density_Boundary_From_Buffer_GPU(int direction, in
 
   #endif  // MPI_CHOLLA
 
-#endif  // PARTICLES_GPU & GRAVITY_GPU
+#endif  // PARTICLES_GPU

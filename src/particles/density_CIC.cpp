@@ -70,7 +70,7 @@ void Grid3D::Copy_Particles_Density()
   Copy_Particles_Density_to_GPU();
     #endif
   Copy_Particles_Density_GPU();
-  #else
+  #elif defined(GRAVITY)
 
     #ifndef PARALLEL_OMP
   Copy_Particles_Density_function(0, Grav.nz_local);
@@ -95,6 +95,7 @@ void Grid3D::Copy_Particles_Density()
 
 void Grid3D::Copy_Particles_Density_function(int g_start, int g_end)
 {
+#if defined(GRAVITY)
   int nx_part, ny_part, nz_part, nGHST;
   nGHST   = Particles.G.n_ghost_particles_grid;
   nx_part = Particles.G.nx_local + 2 * nGHST;
@@ -116,6 +117,7 @@ void Grid3D::Copy_Particles_Density_function(int g_start, int g_end)
       }
     }
   }
+#endif
 }
 
 // Clear the density array: density=0
