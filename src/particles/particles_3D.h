@@ -14,6 +14,8 @@
 
     #include "../global/global.h"
     #include "../gravity/grav3D.h"
+    #include "../grid/spatial_domain_props.h"
+    #include "../utils/gpu.hpp"
 
     #ifdef PARTICLES_GPU
       #define TPB_PARTICLES 1024
@@ -218,7 +220,7 @@ class Particles_3D
 
   Particles_3D(void);
 
-  void Initialize(struct parameters *P, Grav3D &Grav, Real xbound, Real ybound, Real zbound, Real xdglobal,
+  void Initialize(struct parameters *P, const SpatialDomainProps& spatial_props, Real xbound, Real ybound, Real zbound, Real xdglobal,
                   Real ydglobal, Real zdglobal);
 
   void Allocate_Particles_Grid_Field_Real(Real **array_dev, int size);

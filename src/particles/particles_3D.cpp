@@ -10,6 +10,7 @@
   #include <random>
 
   #include "../grid/grid3D.h"
+  #include "../grid/spatial_domain_props.h"
   #include "../io/io.h"
   #include "../model/disk_galaxy.h"
   #include "../utils/error_handling.h"
@@ -29,7 +30,13 @@ void Grid3D::Initialize_Particles(struct parameters *P)
 {
   chprintf("\nInitializing Particles...\n");
 
-  Particles.Initialize(P, Grav, H.xbound, H.ybound, H.zbound, H.xdglobal, H.ydglobal, H.zdglobal);
+#ifdef GRAVITY
+  SpatialDomainProps spatial_props = SpatialDomainProps::From_Grav3D(Grav);
+#else
+  SpatialDomainProps spatial_props = SpatialDomainProps::From_Grid3D(*this, P);
+#endif
+
+  Particles.Initialize(P, spatial_props, H.xbound, H.ybound, H.zbound, H.xdglobal, H.ydglobal, H.zdglobal);
 
   #if defined(PARTICLES_GPU) && defined(GRAVITY_GPU)
   // Set the GPU array for the particles potential equal to the Gravity GPU
@@ -47,8 +54,8 @@ void Grid3D::Initialize_Particles(struct parameters *P)
   chprintf("Particles Initialized Successfully. \n\n");
 }
 
-void Particles_3D::Initialize(struct parameters *P, Grav3D &Grav, Real xbound, Real ybound, Real zbound, Real xdglobal,
-                              Real ydglobal, Real zdglobal)
+void Particles_3D::Initialize(struct parameters *P, const SpatialDomainProps& spatial_props, Real xbound, Real ybound, Real zbound,
+                              Real xdglobal, Real ydglobal, Real zdglobal)
 {
   // Initialize local and total number of particles to 0
   n_local         = 0;
@@ -108,27 +115,27 @@ void Particles_3D::Initialize(struct parameters *P, Grav3D &Grav, Real xbound, R
 
   // Initialize Grid Values
   // Local and total number of cells
-  G.nx_local = Grav.nx_local;
-  G.ny_local = Grav.ny_local;
-  G.nz_local = Grav.nz_local;
-  G.nx_total = Grav.nx_total;
-  G.ny_total = Grav.ny_total;
-  G.nz_total = Grav.nz_total;
+  G.nx_local = spatial_props.nx_local;
+  G.ny_local = spatial_props.ny_local;
+  G.nz_local = spatial_props.nz_local;
+  G.nx_total = spatial_props.nx_total;
+  G.ny_total = spatial_props.ny_total;
+  G.nz_total = spatial_props.nz_total;
 
   // Uniform (dx, dy, dz)
-  G.dx = Grav.dx;
-  G.dy = Grav.dy;
-  G.dz = Grav.dz;
+  G.dx = spatial_props.dx;
+  G.dy = spatial_props.dy;
+  G.dz = spatial_props.dz;
 
   // Left boundaries of the local domain
-  G.xMin = Grav.xMin;
-  G.yMin = Grav.yMin;
-  G.zMin = Grav.zMin;
+  G.xMin = spatial_props.xMin;
+  G.yMin = spatial_props.yMin;
+  G.zMin = spatial_props.zMin;
 
   // Right boundaries of the local domain
-  G.xMax = Grav.xMax;
-  G.yMax = Grav.yMax;
-  G.zMax = Grav.zMax;
+  G.xMax = spatial_props.xMax;
+  G.yMax = spatial_props.yMax;
+  G.zMax = spatial_props.zMax;
 
   // Left boundaries of the global domain
   G.domainMin_x = xbound;
@@ -176,8 +183,16 @@ void Particles_3D::Initialize(struct parameters *P, Grav3D &Grav, Real xbound, R
     #endif
 
   G.size_blocks_array = 1024 * 128;
-  G.n_cells_potential = (G.nx_local + 2 * N_GHOST_POTENTIAL) * (G.ny_local + 2 * N_GHOST_POTENTIAL) *
-                        (G.nz_local + 2 * N_GHOST_POTENTIAL);
+  {
+    #ifdef N_GHOST_POTENTIAL
+    int n_ghost_pot = N_GHOST_POTENTIAL;
+    #else
+    int n_ghost_pot = 0;
+    #endif
+
+    G.n_cells_potential = (G.nx_local + 2 * n_ghost_pot) * (G.ny_local + 2 * n_ghost_pot) *
+                          (G.nz_local + 2 * n_ghost_pot);
+  }
 
     #ifdef SINGLE_PARTICLE_MASS
   mass_dev = NULL;  // This array won't be used
