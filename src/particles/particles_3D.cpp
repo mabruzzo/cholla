@@ -799,11 +799,16 @@ void Particles_3D::Initialize_Isolated_Stellar_Cluster(struct parameters *P)
     real_props.at("pos_x").push_back(nominal_x);
     real_props.at("pos_y").push_back(nominal_y);
     real_props.at("pos_z").push_back(nominal_z);
-    const std::vector<std::string> axis_l = {"x", "y", "z"};
-    for (const std::string& axis : axis_l) {
-      real_props.at("vel_" + axis).push_back(0.0);
-      real_props.at("grav_" + axis).push_back(0.0);
-    }
+
+    // match the motion of the background-fluid
+    real_props.at("vel_x").push_back(P->vx);
+    real_props.at("vel_y").push_back(P->vy);
+    real_props.at("vel_z").push_back(P->vz);
+
+    // initialize remaining props:
+    real_props.at("grav_x").push_back(0.0);
+    real_props.at("grav_y").push_back(0.0);
+    real_props.at("grav_z").push_back(0.0);
   }
 
   this->Initialize_Stellar_Clusters_Helper_(real_props, int_props);
