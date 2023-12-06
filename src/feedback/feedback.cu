@@ -6,6 +6,7 @@
 
   #include <cstring>
   #include <fstream>
+  #include <memory>
   #include <sstream>
   #include <vector>
 
@@ -15,14 +16,14 @@
   #include "../io/io.h"
   #include "../utils/DeviceVector.h"
   #include "../utils/error_handling.h"
-  #include "../utils/reduction_utilities.h"
+  #include "../feedback/kernel.h"
   #include "../feedback/ratecalc.h"
   #include "../feedback/feedback_model.h"
   #include "feedback.h"
 
-  #define TPB_FEEDBACK 128
 
 
+namespace {
 
 /** This function used for debugging potential race conditions.  Feedback from neighboring
     particles could simultaneously alter one hydro cell's conserved quantities.
@@ -45,73 +46,24 @@ inline __device__ bool Particle_Is_Alone(Real* pos_x_dev, Real* pos_y_dev, Real*
   return true;
 }
 
-
-template<typename FeedbackModel>
-__global__ void Cluster_Feedback_Kernel(part_int_t n_local, part_int_t* id_dev, Real* pos_x_dev, Real* pos_y_dev,
-                                        Real* pos_z_dev, Real* mass_dev, Real* age_dev, Real xMin, Real yMin, Real zMin,
-                                        Real xMax, Real yMax, Real zMax, Real dx, Real dy, Real dz, int nx_g, int ny_g,
-                                        int nz_g, int n_ghost, Real t, Real dt, Real* info, Real* conserved_dev,
-                                        Real gamma, int* num_SN_dev, int n_step, FeedbackModel feedback_model)
-{
-  const int tid = threadIdx.x;
-  const int gtid = blockIdx.x * blockDim.x + tid;
-
-  // prologoue: setup buffer for collecting SN feedback information
-  __shared__ Real s_info[feedinfoLUT::LEN * TPB_FEEDBACK];
-  for (unsigned int cur_ind = 0; cur_ind < feedinfoLUT::LEN; cur_ind++) {
-    s_info[feedinfoLUT::LEN * tid + cur_ind] = 0;
-  }
-
-  // do the main work:
-  {
-    // reduce branching
-    part_int_t tmp_gtid_ = min(n_local - 1, part_int_t(gtid));
-
-    Real pos_x    = pos_x_dev[tmp_gtid_];
-    Real pos_y    = pos_y_dev[tmp_gtid_];
-    Real pos_z    = pos_z_dev[tmp_gtid_];
-
-    // compute the position in index-units (appropriate for a field with a ghost-zone)
-    // - an integer value corresponds to the left edge of a cell
-    const Real pos_x_indU = (pos_x - xMin) / dx + n_ghost;
-    const Real pos_y_indU = (pos_y - yMin) / dy + n_ghost;
-    const Real pos_z_indU = (pos_z - zMin) / dz + n_ghost;
-
-    bool ignore = (((pos_x_indU < n_ghost) or (pos_x_indU >= (nx_g - n_ghost))) or
-                   ((pos_y_indU < n_ghost) or (pos_y_indU >= (ny_g - n_ghost))) or
-                   ((pos_z_indU < n_ghost) or (pos_z_indU >= (ny_g - n_ghost))));
-
-    if ((not ignore) and (n_local > gtid)) {
-      // note age_dev is actually the time of birth
-      Real age = t - age_dev[gtid];
-
-      feedback_model.apply_feedback(pos_x_indU, pos_y_indU, pos_z_indU, age, mass_dev, id_dev, dx, dy, dz,
-                                    nx_g, ny_g, nz_g, n_ghost, num_SN_dev[gtid], s_info, conserved_dev);
-    }
-  }
-
-
-  // epilogue: sum the info from all threads (in all blocks) and add it into info
-  __syncthreads();
-  reduction_utilities::blockAccumulateIntoNReals<feedinfoLUT::LEN,TPB_FEEDBACK>(info, s_info);
-}
+}; // anonymous namespace
 
 /* determine the number of supernovae during the current step */
 __global__ void Get_SN_Count_Kernel(part_int_t n_local, part_int_t* id_dev, Real* mass_dev,
-                                    Real* age_dev, Real t, Real dt,
-                                    const feedback::SNRateCalc snr_calc, int n_step, int* num_SN_dev)
+                                    Real* age_dev, const feedback_details::CycleProps cycle_props,
+                                    const feedback::SNRateCalc snr_calc, int* num_SN_dev)
 {
-  int tid = threadIdx.x;
-
-  int gtid = blockIdx.x * blockDim.x + tid;
-  // Bounds check on particle arrays
-  if (gtid >= n_local) return;
-
-  // note age_dev is actually the time of birth
-  Real age = t - age_dev[gtid];
-
-  Real average_num_sn = snr_calc.Get_SN_Rate(age) * mass_dev[gtid] * dt;
-  num_SN_dev[gtid]    = snr_calc.Get_Number_Of_SNe_In_Cluster(average_num_sn, n_step, id_dev[gtid]);
+  // All threads across the grid will iterate over the list of particles
+  // - this is grid-strided loop. This is a common idiom that makes the kernel more flexible
+  // - If there are more local particles than threads, some threads will visit more than 1 particle
+  const int start = blockIdx.x * blockDim.x + threadIdx.x;
+  const int loop_stride = blockDim.x * gridDim.x;
+  for (int i = start; i < n_local; i += loop_stride) {
+    // note age_dev is actually the time of birth
+    Real age = cycle_props.t - age_dev[i];
+    Real average_num_sn = snr_calc.Get_SN_Rate(age) * mass_dev[i] * cycle_props.dt;
+    num_SN_dev[i]    = snr_calc.Get_Number_Of_SNe_In_Cluster(average_num_sn, cycle_props.n_step, id_dev[i]);
+  }
 }
 
 namespace { // anonymous namespace
@@ -121,9 +73,11 @@ namespace { // anonymous namespace
 template<typename FeedbackModel>
 struct ClusterFeedbackMethod {
 
+  ClusterFeedbackMethod() = delete;
+
   ClusterFeedbackMethod(FeedbackAnalysis& analysis, bool use_snr_calc, feedback::SNRateCalc snr_calc)
-    : analysis(analysis), use_snr_calc_(use_snr_calc), snr_calc_(snr_calc)
-{ }
+    : analysis(analysis), use_snr_calc_(use_snr_calc), snr_calc_(snr_calc), lazy_ov_scheduler_(nullptr)
+  { }
 
   /* Actually apply the stellar feedback (SNe and stellar winds) */
   void operator() (Grid3D& G);
@@ -135,6 +89,8 @@ private: // attributes
    * supernova during the very first cycle and then never have a supernova again. */
   const bool use_snr_calc_;
   feedback::SNRateCalc snr_calc_;
+  /* Handles the scheduling of feedback from separate particles with overlapping stencils (lazily initialized) */
+  std::shared_ptr<feedback_details::OverlapScheduler> lazy_ov_scheduler_;
 };
 
 } // close anonymous namespace
@@ -171,14 +127,34 @@ void ClusterFeedbackMethod<FeedbackModel>::operator()(Grid3D& G)
     // given by TPB_FEEDBACK
     int ngrid = (G.Particles.n_local - 1) / TPB_FEEDBACK + 1;
 
+    // setup some standard argument packs:
+    const feedback_details::ParticleProps particle_props{
+      G.Particles.n_local,
+      G.Particles.partIDs_dev,
+      G.Particles.pos_x_dev, G.Particles.pos_y_dev, G.Particles.pos_z_dev,
+      G.Particles.vel_x_dev, G.Particles.vel_y_dev, G.Particles.vel_z_dev,
+      G.Particles.mass_dev,
+      G.Particles.age_dev
+    };
+
+    const feedback_details::FieldSpatialProps spatial_props{
+      G.H.xblocal, G.H.yblocal, G.H.zblocal,
+      G.H.xblocal_max, G.H.yblocal_max, G.H.zblocal_max,
+      G.H.dx, G.H.dy, G.H.dz,
+      G.H.nx, G.H.ny,
+      G.H.nz, G.H.n_ghost,
+    };
+
+    const feedback_details::CycleProps cycle_props{G.H.t, G.H.dt, G.H.n_step};
+
     // Declare/allocate device buffer for holding the number of supernovae per particle in the current cycle
     // (The following behavior can be accomplished without any memory allocations if we employ templates)
     cuda_utilities::DeviceVector<int> d_num_SN(G.Particles.n_local, true);  // initialized to 0
 
     if (use_snr_calc_) {
       hipLaunchKernelGGL(Get_SN_Count_Kernel, ngrid, TPB_FEEDBACK, 0, 0, G.Particles.n_local,
-                         G.Particles.partIDs_dev, G.Particles.mass_dev, G.Particles.age_dev, G.H.t, G.H.dt,
-                         snr_calc_, G.H.n_step, d_num_SN.data());
+                         G.Particles.partIDs_dev, G.Particles.mass_dev, G.Particles.age_dev, cycle_props,
+                         snr_calc_, d_num_SN.data());
       CHECK(cudaDeviceSynchronize());
     } else {
       // in this branch, ``this->use_snr_calc_ == false``. This means that we assume all particles undergo
@@ -191,21 +167,15 @@ void ClusterFeedbackMethod<FeedbackModel>::operator()(Grid3D& G)
       }
     }
 
-    // Declare/allocate device buffer for accumulating summary information about feedback
-    cuda_utilities::DeviceVector<Real> d_info(feedinfoLUT::LEN, true);  // initialized to 0
+    if (lazy_ov_scheduler_.get() == nullptr) {
+      lazy_ov_scheduler_ = std::make_shared<feedback_details::OverlapScheduler>(
+        feedback_details::OverlapStrat::sequential,
+        spatial_props.nx_g, spatial_props.ny_g, spatial_props.nz_g);
+    }
 
-    // initialize feedback_model
-    FeedbackModel feedback_model{};
-
-    hipLaunchKernelGGL(Cluster_Feedback_Kernel, ngrid, TPB_FEEDBACK, 0, 0, G.Particles.n_local,
-                       G.Particles.partIDs_dev, G.Particles.pos_x_dev, G.Particles.pos_y_dev, G.Particles.pos_z_dev,
-                       G.Particles.mass_dev, G.Particles.age_dev, G.H.xblocal, G.H.yblocal, G.H.zblocal,
-                       G.H.xblocal_max, G.H.yblocal_max, G.H.zblocal_max, G.H.dx, G.H.dy, G.H.dz, G.H.nx, G.H.ny,
-                       G.H.nz, G.H.n_ghost, G.H.t, G.H.dt, d_info.data(), G.C.d_density, gama, 
-                       d_num_SN.data(), G.H.n_step, feedback_model);
-
-    // copy summary data back to the host
-    CHECK(cudaMemcpy(&h_info, d_info.data(), feedinfoLUT::LEN * sizeof(Real), cudaMemcpyDeviceToHost));
+    feedback_details::Exec_Cluster_Feedback_Kernel<FeedbackModel>(
+      particle_props, spatial_props, cycle_props, h_info, G.C.d_density, d_num_SN.data(), *lazy_ov_scheduler_
+    );
   }
 
   // now gather the feedback summary info into an array called info.

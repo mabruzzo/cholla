@@ -16,12 +16,19 @@ namespace feedback_model {
 template<typename Stencil>
 struct ResolvedSNPrescription{
 
-  static __device__ void apply_feedback(Real pos_x_indU, Real pos_y_indU, Real pos_z_indU, Real age, Real* mass_dev, 
-                                        part_int_t* id_dev, Real dx, Real dy, Real dz, int nx_g, int ny_g, int nz_g,
+  template<typename Function>
+  static __device__ void for_each_possible_overlap(Real pos_x_indU, Real pos_y_indU, Real pos_z_indU,
+                                                   int nx_g, int ny_g, Function f)
+  {
+    Stencil::for_each(pos_x_indU, pos_y_indU, pos_z_indU, nx_g, ny_g, f);
+  }
+
+  static __device__ void apply_feedback(Real pos_x_indU, Real pos_y_indU, Real pos_z_indU, Real vel_x, Real vel_y, Real vel_z,
+                                        Real age, Real& mass_ref, part_int_t particle_id,
+                                        Real dx, Real dy, Real dz, int nx_g, int ny_g, int nz_g,
                                         int n_ghost, int num_SN, Real* s_info, Real* conserved_dev)
   {
     int tid  = threadIdx.x;
-    int gtid = blockIdx.x * blockDim.x + tid;
 
     s_info[feedinfoLUT::LEN * tid + feedinfoLUT::countSN]       += num_SN;
     s_info[feedinfoLUT::LEN * tid + feedinfoLUT::countResolved] += num_SN;
@@ -31,11 +38,11 @@ struct ResolvedSNPrescription{
     Real feedback_energy  = num_SN * feedback::ENERGY_PER_SN / dV;
     Real feedback_density = num_SN * feedback::MASS_PER_SN / dV;
 
-    mass_dev[gtid] -= num_SN * feedback::MASS_PER_SN; // update the cluster mass
+    mass_ref -= num_SN * feedback::MASS_PER_SN; // update the cluster mass
 
     if (num_SN == 0)  return; // TODO: see if we can remove this!
 
-    ResolvedSNPrescription::apply(pos_x_indU, pos_y_indU, pos_z_indU, 0.0, 0.0, 0.0,
+    ResolvedSNPrescription::apply(pos_x_indU, pos_y_indU, pos_z_indU, vel_x, vel_y, vel_z,
                                   nx_g, ny_g, nx_g * ny_g * nz_g, conserved_dev,
                                   feedback_density, feedback_energy);
   }
@@ -47,9 +54,9 @@ struct ResolvedSNPrescription{
                                Real* conserved_device, Real feedback_density, Real feedback_energy)
   {
     Real* density    = conserved_device;
-    //Real* momentum_x = &conserved_device[n_cells * grid_enum::momentum_x];
-    //Real* momentum_y = &conserved_device[n_cells * grid_enum::momentum_y];
-    //Real* momentum_z = &conserved_device[n_cells * grid_enum::momentum_z];
+    Real* momentum_x = &conserved_device[n_cells * grid_enum::momentum_x];
+    Real* momentum_y = &conserved_device[n_cells * grid_enum::momentum_y];
+    Real* momentum_z = &conserved_device[n_cells * grid_enum::momentum_z];
     Real* energy     = &conserved_device[n_cells * grid_enum::Energy];
 #ifdef DE
     Real* gasEnergy  = &conserved_device[n_cells * grid_enum::GasEnergy];
@@ -60,9 +67,6 @@ struct ResolvedSNPrescription{
       [=](double stencil_vol_frac, int idx3D) {
         // stencil_vol_frac is the fraction of the total stencil volume enclosed by the given cell
         // indx3D can be used to index the conserved fields (it assumes ghost-zones are present)
-
-# if 0
-        Real initial_density = density[idx3D];
 
         // Step 1: substract off the kinetic-energy-density from total energy density.
         //  - While we aren't going to inject any of the supernova energy directly as kinetic energy,
@@ -98,14 +102,6 @@ struct ResolvedSNPrescription{
         energy[idx3D] += 0.5 * (momentum_x[idx3D] * momentum_x[idx3D] +
                                 momentum_y[idx3D] * momentum_y[idx3D] +
                                 momentum_z[idx3D] * momentum_z[idx3D]) / density[idx3D];
-
-#else
-        atomicAdd(&density[idx3D], stencil_vol_frac * feedback_density);
-  #ifdef DE
-        atomicAdd(&gasEnergy[idx3D], stencil_vol_frac * feedback_energy);
-  #endif
-        atomicAdd(&energy[idx3D], stencil_vol_frac * feedback_energy);
-#endif
       }
     );
   }
@@ -259,12 +255,33 @@ inline __device__ void Apply_Energy_Momentum_Deposition(Real pos_x_indU, Real po
 template<typename ResolvedPrescriptionT>
 struct LegacySNe {
 
-  static __device__ void apply_feedback(Real pos_x_indU, Real pos_y_indU, Real pos_z_indU, Real age, Real* mass_dev, part_int_t* id_dev,
+  template<typename Function>
+  static __device__ void for_each_possible_overlap(Real pos_x_indU, Real pos_y_indU, Real pos_z_indU,
+                                                   int nx_g, int ny_g, Function f)
+  {
+    // for right now, we are assuming that the stencil of the unresolved feedback is the same size or
+    // bigger than the stencil used for the resolved feedback
+    int indx_x = (int)floor(pos_x_indU);
+    int indx_y = (int)floor(pos_y_indU);
+    int indx_z = (int)floor(pos_z_indU);
+
+    for (int i = -1; i < 2; i++) {
+      for (int j = -1; j < 2; j++) {
+        for (int k = -1; k < 2; k++) {
+          const Real dummy = 0.0;
+          f(dummy, (indx_x + i) + ((indx_y + j) + (indx_z + k) * ny_g)* nx_g);
+        }
+      }
+    }
+
+  }
+
+  static __device__ void apply_feedback(Real pos_x_indU, Real pos_y_indU, Real pos_z_indU, Real vel_x, Real vel_y, Real vel_z,
+                                        Real age, Real& mass_ref, part_int_t particle_id,
                                         Real dx, Real dy, Real dz, int nx_g, int ny_g, int nz_g, int n_ghost,
                                         int num_SN, Real* s_info, Real* conserved_dev)
   {
     int tid  = threadIdx.x;
-    int gtid = blockIdx.x * blockDim.x + tid;
 
     Real dV = dx * dy * dz;
     int n_cells    = nx_g * ny_g * nz_g;
@@ -287,14 +304,14 @@ struct LegacySNe {
     bool is_resolved =  (3 * max(dx, max(dy, dz)) <= shell_radius);
 
     // update the cluster mass
-    mass_dev[gtid] -= num_SN * feedback::MASS_PER_SN;
+    mass_ref -= num_SN * feedback::MASS_PER_SN;
 
     if (is_resolved) {
       // inject energy and density
       s_info[feedinfoLUT::LEN * tid + feedinfoLUT::countResolved] += num_SN;
       s_info[feedinfoLUT::LEN * tid + feedinfoLUT::totalEnergy]   += feedback_energy * dV;
 
-      ResolvedPrescriptionT::apply(pos_x_indU, pos_y_indU, pos_z_indU, 0.0, 0.0, 0.0, nx_g, ny_g, n_cells,
+      ResolvedPrescriptionT::apply(pos_x_indU, pos_y_indU, pos_z_indU, vel_x, vel_y, vel_z, nx_g, ny_g, n_cells,
                                    conserved_dev, feedback_density, feedback_energy);
     } else {
       // currently, only unresolved SN feedback involves averaging the densities.
@@ -314,14 +331,13 @@ struct LegacySNe {
 };
 
 /*
-inline __device__ void Wind_Feedback(Real pos_x, Real pos_y, Real pos_z, Real age, Real* mass_dev, part_int_t* id_dev,
+inline __device__ void Wind_Feedback(Real pos_x, Real pos_y, Real pos_z, Real age, Real& mass_ref, part_int_t particle_id,
                                      Real xMin, Real yMin, Real zMin, Real xMax, Real yMax, Real zMax, Real dx, Real dy,
                                      Real dz, int nx_g, int ny_g, int nz_g, int n_ghost, int n_step, Real t, Real dt,
                                      const feedback::SWRateCalc sw_calc, Real* s_info,
                                      Real* conserved_dev, Real gamma, int indx_x, int indx_y, int indx_z)
 {
   int tid  = threadIdx.x;
-  int gtid = blockIdx.x * blockDim.x + tid;
 
   Real dV = dx * dy * dz;
   int n_cells    = nx_g * ny_g * nz_g;
@@ -334,11 +350,11 @@ inline __device__ void Wind_Feedback(Real pos_x, Real pos_y, Real pos_z, Real ag
   Real feedback_density = sw_calc.Get_Wind_Mass(feedback_momentum, feedback_energy);
 
   // feedback_momentum now becomes momentum component along one direction.
-  feedback_momentum *= mass_dev[gtid] * dt / dV / sqrt(3.0);
-  feedback_density *= mass_dev[gtid] * dt / dV;
-  feedback_energy *= mass_dev[gtid] * dt / dV;
+  feedback_momentum *= mass_ref * dt / dV / sqrt(3.0);
+  feedback_density *= mass_ref * dt / dV;
+  feedback_energy *= mass_ref * dt / dV;
 
-  mass_dev[gtid]   -= feedback_density * dV;
+  mass_ref   -= feedback_density * dV;
 
   // we log net momentum, not momentum density, and magnitude (not the
   // component along a direction)

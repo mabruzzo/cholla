@@ -247,8 +247,10 @@ std::function<void(Grid3D&)> feedback_callback;
     // calculate the timestep by calling MPI_Allreduce
     G.set_dt(dti);
 
-    if (G.H.t + G.H.dt > outtime) {
-      G.H.dt = outtime - G.H.t;
+    // adjust timestep based on the next available scheduled time
+    const Real next_scheduled_time = fmin(outtime, P.tout);
+    if (G.H.t + G.H.dt > next_scheduled_time) {
+      G.H.dt = next_scheduled_time - G.H.t;
     }
 
 #ifdef PARTICLES
@@ -310,9 +312,7 @@ std::function<void(Grid3D&)> feedback_callback;
         "%9.3f ms   total time = %9.4f s\n\n",
         G.H.n_step, G.H.t, G.H.dt, (stop_step - start_step) * 1000, G.H.t_wall);
 
-#ifdef OUTPUT_ALWAYS
-    G.H.Output_Now = true;
-#endif
+    if (P.output_always) G.H.Output_Now = true;
 
 #ifdef ANALYSIS
     if (G.Analysis.Output_Now) G.Compute_and_Output_Analysis(&P);
@@ -331,8 +331,9 @@ std::function<void(Grid3D&)> feedback_callback;
       // add one to the output file count
       nfile++;
 #endif  // OUTPUT
-      // update to the next output time
-      outtime += P.outstep;
+      if (G.H.t == outtime) {
+        outtime += P.outstep;  // update to the next output time
+      }
     }
 
 #ifdef CPU_TIME
