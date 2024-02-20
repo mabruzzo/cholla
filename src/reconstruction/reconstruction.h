@@ -7,50 +7,63 @@
 #ifndef RECONSTRUCTION_H
 #define RECONSTRUCTION_H
 
+#include "../reconstruction/pcm_cuda.h"
+#include "../reconstruction/reconstruction_internals.h"
 #include "../utils/hydro_utilities.h"
 
 namespace reconstruction
 {
-struct InterfaceState {
-  // Hydro variables
-  Real density, energy;
-  /// Note that `pressure` here is the gas pressure not the total pressure which would include the magnetic component
-  Real pressure;
-  hydro_utilities::VectorXYZ velocity, momentum;
+template <int reconstruction_order, size_t direction>
+auto __device__ __host__ inline Reconstruct_Interface_States(Real const *dev_conserved, size_t const xid,
+                                                             size_t const yid, size_t const zid, size_t const nx,
+                                                             size_t const ny, size_t const n_cells, Real const gamma,
+                                                             reconstruction::InterfaceState &left_interface,
+                                                             reconstruction::InterfaceState &right_interface)
+{
+  // First, check that our reconstruction order is correct
+  static_assert(
+      (reconstruction_order == reconstruction::Kind::pcm) or (reconstruction_order == reconstruction::Kind::plmc) or
+          (reconstruction_order == reconstruction::Kind::plmp) or
+          (reconstruction_order == reconstruction::Kind::ppmc) or (reconstruction_order == reconstruction::Kind::ppmp),
+      "The reconstruction chosen does not exist. You must use a member of reconstruction::Kind to choose the order.");
 
-#ifdef MHD
-  // These are all cell centered values
-  Real total_pressure;
-  hydro_utilities::VectorXYZ magnetic;
-#endif  // MHD
+  // Choose the correct reconstruction method and compute the interface states
+  if constexpr (reconstruction_order == reconstruction::Kind::pcm) {
+    left_interface =
+        reconstruction::PCM_Reconstruction<direction>(dev_conserved, xid, yid, zid, nx, ny, n_cells, gamma);
+    right_interface = reconstruction::PCM_Reconstruction<direction>(dev_conserved, xid + int(direction == 0),
+                                                                    yid + int(direction == 1),
+                                                                    zid + int(direction == 2), nx, ny, n_cells, gamma);
+  }
+  // else if constexpr(reconstruction_order == reconstruction::Kind::plmc)
+  // {
 
-#ifdef DE
-  Real gas_energy_specific;
-#endif  // DE
+  // }
+  // else if constexpr(reconstruction_order == reconstruction::Kind::plmp)
+  // {
 
-#ifdef SCALAR
-  Real scalar_specific[grid_enum::nscalars];
-#endif  // SCALAR
+  // }
+  // else if constexpr(reconstruction_order == reconstruction::Kind::ppmc)
+  // {
 
-  // Define the constructors
-  /// Default constructor, should set everything to 0
-  InterfaceState() = default;
-  /// Initializing constructor: used to initialize to specific values, mostly used in tests. It only initializes a
-  /// subset of the member variables since that is what is used in tests at the time of writing.
-  InterfaceState(Real const in_density, hydro_utilities::VectorXYZ const in_velocity, Real const in_energy,
-                 Real const in_pressure, hydro_utilities::VectorXYZ const in_magnetic = {0, 0, 0},
-                 Real const in_total_pressure = 0.0)
-      : density(in_density), velocity(in_velocity), energy(in_energy), pressure(in_pressure)
-  {
-    momentum.x() = velocity.x() * density;
-    momentum.y() = velocity.y() * density;
-    momentum.z() = velocity.z() * density;
-#ifdef MHD
-    magnetic       = in_magnetic;
-    total_pressure = in_total_pressure;
-#endif  // MHD
-  };
-};
+  // }
+  // else if constexpr(reconstruction_order == reconstruction::Kind::ppmp)
+  // {
+
+  // }
+  // else
+  // {
+  //   // todo, once refactor is done, move static assert warning to here since having it seperate effectively
+  //   duplicates effort
+  // }
+
+  // Renable this once all reconstructions have been converted
+  // struct LocalReturnStruct {
+  //   reconstruction::InterfaceState left, right;
+  // };
+  // return LocalReturnStruct{left_interface, right_interface};
+}
+
 }  // namespace reconstruction
 
 #endif  //! RECONSTRUCTION_H
