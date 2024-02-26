@@ -25,19 +25,10 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real const *dev_conserved, Real const 
   // specific versions despite the name in the struct
   reconstruction::InterfaceState left_state, right_state;
 
-  // Real g1 = gamma - 1.0;
-  // Real Hl, Hr;
-  // Real sqrtdl, sqrtdr, vx, vy, vz, H;
-  // Real vsq, asq, a;
-  // Real lambda_m, lambda_p;
   Real f_d_l, f_mx_l, f_my_l, f_mz_l, f_E_l;
   Real f_d_r, f_mx_r, f_my_r, f_mz_r, f_E_r;
-  // Real dls, drs, mxls, mxrs, myls, myrs, mzls, mzrs, left_state.energys, Ers;
   Real f_d, f_mx, f_my, f_mz, f_E;
   Real Sl, Sr, cfl, cfr;
-#ifdef DE
-  Real f_ge_l, f_ge_r, f_ge, E_kin;
-#endif
 #ifdef SCALAR
   Real f_sc_l[NSCALARS], f_sc_r[NSCALARS], f_sc[NSCALARS];
 #endif
@@ -261,9 +252,9 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real const *dev_conserved, Real const 
           ((Sr * f_mz_l) - (Sl * f_mz_r) + Sl * Sr * (right_state.momentum.z() - left_state.momentum.z())) / (Sr - Sl);
       f_E = ((Sr * f_E_l) - (Sl * f_E_r) + Sl * Sr * (right_state.energy - left_state.energy)) / (Sr - Sl);
 #ifdef DE
-      f_ge = ((Sr * f_ge_l) - (Sl * f_ge_r) +
-              Sl * Sr * (right_state.gas_energy_specific - left_state.gas_energy_specific)) /
-             (Sr - Sl);
+      Real f_ge = ((Sr * f_ge_l) - (Sl * f_ge_r) +
+                   Sl * Sr * (right_state.gas_energy_specific - left_state.gas_energy_specific)) /
+                  (Sr - Sl);
 #endif
 #ifdef SCALAR
       for (int i = 0; i < NSCALARS; i++) {

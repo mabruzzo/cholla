@@ -45,10 +45,6 @@ __global__ void Calculate_Exact_Fluxes_CUDA(Real const *dev_conserved, Real cons
                         // energy
   Real vm, pm;          // velocity and pressure in the star region
 
-#ifdef DE
-  Real E_kin, E, dge;
-#endif
-
   // Thread guard to avoid overrun
   if (not reconstruction::Riemann_Thread_Guard<reconstruction>(nx, ny, nz, xid, yid, zid)) {
     // =========================

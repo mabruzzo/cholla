@@ -35,9 +35,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
     Real dls, drs, mxls, mxrs, myls, myrs, mzls, mzrs, Els, Ers;
     Real f_d, f_mx, f_my, f_mz, f_E;
     Real Sl, Sr, Sm, cfl, cfr, ps;
-#ifdef DE
-    Real dgel, dger, gels, gers, f_ge_l, f_ge_r, f_ge, E_kin;
-#endif
+
 #ifdef SCALAR
     Real dscl[NSCALARS], dscr[NSCALARS], scls[NSCALARS], scrs[NSCALARS], f_sc_l[NSCALARS], f_sc_r[NSCALARS],
         f_sc[NSCALARS];
@@ -83,7 +81,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
       }
 #endif
 #ifdef DE
-      dgel = dev_bounds_L[(n_fields - 1) * n_cells + tid];
+      Real gas_energy_left = dev_bounds_L[(n_fields - 1) * n_cells + tid];
 #endif
 
     right_state.density      = dev_bounds_R[tid];
@@ -97,7 +95,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
       }
 #endif
 #ifdef DE
-      dger = dev_bounds_R[(n_fields - 1) * n_cells + tid];
+      Real gas_energy_right = dev_bounds_R[(n_fields - 1) * n_cells + tid];
 #endif
 
     // calculate primitive variables
@@ -124,7 +122,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
       }
 #endif
 #ifdef DE
-      left_state.gas_energy_specific = dgel / left_state.density;
+      left_state.gas_energy_specific = gas_energy_left / left_state.density;
 #endif
     right_state.velocity.x() = right_state.momentum.x() / right_state.density;
     right_state.velocity.y() = right_state.momentum.y() / right_state.density;
@@ -149,7 +147,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
       }
 #endif
 #ifdef DE
-      right_state.gas_energy_specific = dger / right_state.density;
+      right_state.gas_energy_specific = gas_energy_right / right_state.density;
 #endif
     }
 
@@ -270,7 +268,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
              ps * Sm) /
             (Sl - Sm);
 #ifdef DE
-      gels = dls * left_state.gas_energy_specific;
+      Real gels = dls * left_state.gas_energy_specific;
 #endif
 #ifdef SCALAR
       for (int i = 0; i < NSCALARS; i++) {
@@ -287,7 +285,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
              ps * Sm) /
             (Sr - Sm);
 #ifdef DE
-      gers = drs * right_state.gas_energy_specific;
+      Real gers = drs * right_state.gas_energy_specific;
 #endif
 #ifdef SCALAR
       for (int i = 0; i < NSCALARS; i++) {
@@ -307,7 +305,9 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
       f_E  = 0.5 * (f_E_l + f_E_r + (Sr - fabs(Sm)) * Ers + (Sl + fabs(Sm)) * Els - Sl * left_state.energy -
                    Sr * right_state.energy);
 #ifdef DE
-      f_ge = 0.5 * (f_ge_l + f_ge_r + (Sr - fabs(Sm)) * gers + (Sl + fabs(Sm)) * gels - Sl * dgel - Sr * dger);
+      Real f_ge = 0.5 * (f_ge_l + f_ge_r + (Sr - fabs(Sm)) * gers + (Sl + fabs(Sm)) * gels -
+                         Sl * left_state.gas_energy_specific * left_state.density -
+                         Sr * right_state.gas_energy_specific * right_state.density);
 #endif
 #ifdef SCALAR
       for (int i = 0; i < NSCALARS; i++) {

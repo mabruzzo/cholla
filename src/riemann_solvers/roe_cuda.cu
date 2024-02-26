@@ -38,9 +38,7 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real const *dev_conserved, Real const 
   sum_0 = sum_1 = sum_2 = sum_3 = sum_4 = 0.0;
   Real test0, test1, test2, test3, test4;
   int hlle_flag = 0;
-#ifdef DE
-  Real dgel, dger, f_ge_l, f_ge_r, E_kin;
-#endif
+
 #ifdef SCALAR
   Real dscalarl[NSCALARS], dscalarr[NSCALARS], f_scalar_l[NSCALARS], f_scalar_r[NSCALARS];
 #endif
@@ -85,7 +83,7 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real const *dev_conserved, Real const 
       }
 #endif
 #ifdef DE
-      dgel = dev_bounds_L[(n_fields - 1) * n_cells + tid];
+      Real gas_energy_left = dev_bounds_L[(n_fields - 1) * n_cells + tid];
 #endif
 
     right_state.density      = dev_bounds_R[tid];
@@ -99,7 +97,7 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real const *dev_conserved, Real const 
       }
 #endif
 #ifdef DE
-      dger = dev_bounds_R[(n_fields - 1) * n_cells + tid];
+      Real gas_energy_right = dev_bounds_R[(n_fields - 1) * n_cells + tid];
 #endif
 
     // calculate primitive variables
@@ -126,7 +124,7 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real const *dev_conserved, Real const 
       }
 #endif
 #ifdef DE
-      left_state.gas_energy_specific = dgel / left_state.density;
+      left_state.gas_energy_specific = gas_energy_left / left_state.density;
 #endif
     right_state.velocity.x() = right_state.momentum.x() / right_state.density;
     right_state.velocity.y() = right_state.momentum.y() / right_state.density;
@@ -151,7 +149,7 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real const *dev_conserved, Real const 
       }
 #endif
 #ifdef DE
-      right_state.gas_energy_specific = dger / right_state.density;
+      right_state.gas_energy_specific = gas_energy_right / right_state.density;
 #endif
     }
     // calculate the enthalpy in each cell
