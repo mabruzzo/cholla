@@ -8,6 +8,9 @@
   #include "../utils/gpu.hpp"
   #include "../utils/error_handling.h"
 
+  #include "../model/disk_galaxy.h"
+  #include "../model/potentials.h"
+
 Potential_Paris_Galactic::Potential_Paris_Galactic()
     : dn_{0, 0, 0},
       dr_{0, 0, 0},
@@ -33,7 +36,7 @@ void Potential_Paris_Galactic::Get_Potential(const Real *const density, Real *co
                                              const Real grav_const, const DiskGalaxy &galaxy)
 {
   const Real scale = Real(4) * M_PI * grav_const;
-  if (grav_const == GN)  CHOLLA_ERROR("For consistency, grav_const must be equal to the GN macro");
+  if (grav_const != GN)  CHOLLA_ERROR("For consistency, grav_const must be equal to the GN macro");
 
   assert(da_);
   // we are (presumably) defining aliases for this->da_ and this->db_ since the aliases
@@ -82,11 +85,9 @@ void Potential_Paris_Galactic::Get_Potential(const Real *const density, Real *co
   //   mass in the simulation)
   // - it would be nice if we could link to a source explaining these "reasons"
 
-  const Real md = galaxy.getM_d();
-  const Real rd = galaxy.getR_d();
-  const Real zd = galaxy.getZ_d();
+  const MiyamotoNagaiDiskProps stellar_disk = galaxy.getStellarDisk();
+  const NFWHaloPotential halo               = galaxy.getHaloPotential();
 
-  const Real rho0 = md * zd * zd / (4.0 * M_PI);
   gpuFor(
       nk, nj, ni, GPU_LAMBDA(const int k, const int j, const int i) {
         const int ia = i + ni * (j + nj * k);
@@ -95,13 +96,10 @@ void Potential_Paris_Galactic::Get_Potential(const Real *const density, Real *co
         const Real y = yMin + j * dy;
         const Real z = zMin + k * dz;
 
-        const Real r    = sqrt(x * x + y * y);
-        const Real a    = sqrt(z * z + zd * zd);
-        const Real b    = rd + a;
-        const Real c    = r * r + b * b;
-        const Real dRho = rho0 * (rd * c + 3.0 * a * b * b) / (a * a * a * pow(c, 2.5));
+        const Real R    = sqrt(x * x + y * y);
+        const Real rho_analytic = stellar_disk.rho_disk_D3D(R,z) + halo.rho_halo_D3D(R,z);
 
-        da[ia] = scale * (rho[ia] - dRho);
+        da[ia] = scale * (rho[ia] - rho_analytic);
       });
 
   // STEP 2: actually solve poisson's equation (the function's implementation
@@ -121,7 +119,6 @@ void Potential_Paris_Galactic::Get_Potential(const Real *const density, Real *co
   //
   // Putting this together: db holds `(Phi_real - Phi_analytic)`. To get `Phi_real`,
   // we simply compute `Phi_analytic + (Phi_real - Phi_analytic)`.
-  const Real phi0 = -grav_const * md;
   gpuFor(
       nk, nj, ni, GPU_LAMBDA(const int k, const int j, const int i) {
         const int ia = i + ni * (j + nj * k);
@@ -131,13 +128,10 @@ void Potential_Paris_Galactic::Get_Potential(const Real *const density, Real *co
         const Real y = yMin + j * dy;
         const Real z = zMin + k * dz;
 
-        const Real r    = sqrt(x * x + y * y);
-        const Real a    = sqrt(z * z + zd * zd);
-        const Real b    = a + rd;
-        const Real c    = sqrt(r * r + b * b);
-        const Real dPhi = phi0 / c;
+        const Real R    = sqrt(x * x + y * y);
+        const Real phi_analytic = stellar_disk.phi_disk_D3D(R,z) + halo.phi_halo_D3D(R,z);
 
-        phi[ib] = db[ia] + dPhi;
+        phi[ib] = db[ia] + phi_analytic;
       });
 
   #ifdef GRAVITY_GPU
