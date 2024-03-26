@@ -36,7 +36,7 @@ static const Real R_SH = 0.0302;
  *
  * \note
  * we could probably define the following function regardless of the defined compiler flags */
-std::function<void(Grid3D&)> configure_feedback_callback(struct parameters& P,
+std::function<void(Grid3D&)> configure_feedback_callback(struct Parameters& P,
                                                          FeedbackAnalysis& analysis);
 
 }  // namespace feedback

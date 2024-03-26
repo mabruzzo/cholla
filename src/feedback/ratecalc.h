@@ -73,7 +73,7 @@ public:
    *
    * @param P reference to parameters struct. Passes in starburst 99 filename.
    */
-  __host__ SNRateCalc(struct parameters& P);
+  __host__ SNRateCalc(struct Parameters& P);
 
   /* returns supernova rate from starburst 99 (or default analytical rate).
    * 
@@ -151,7 +151,7 @@ private: // attributes
  */
 struct SWRateCalc {
 
-  __host__ SWRateCalc(struct parameters& P);
+  __host__ SWRateCalc(struct Parameters& P);
 
   __host__ __device__ SWRateCalc(Real *dev_sw_p, Real* dev_sw_e, Real dt, Real t_start, Real t_end)
     : dev_sw_p_(dev_sw_p), dev_sw_e_(dev_sw_e), sw_dt_(dt), time_sw_start_(t_start), time_sw_end_(t_end)

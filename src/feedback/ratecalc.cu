@@ -7,7 +7,7 @@
 
 
 
-feedback::SNRateCalc::SNRateCalc(struct parameters& P)
+feedback::SNRateCalc::SNRateCalc(struct Parameters& P)
   : SNRateCalc() // the dfault constructor sets up some sensible defaults
 {
 
@@ -40,8 +40,8 @@ feedback::SNRateCalc::SNRateCalc(struct parameters& P)
     // (i.e. assumes regular temporal spacing)
     snr_dt_ = (time_sn_end_ - time_sn_start_) / (snr.size() - 1);
 
-    CHECK(cudaMalloc((void**)&dev_snr_, snr.size() * sizeof(Real)));
-    CHECK(cudaMemcpy(dev_snr_, snr.data(), snr.size() * sizeof(Real), cudaMemcpyHostToDevice));
+    GPU_Error_Check(cudaMalloc((void**)&dev_snr_, snr.size() * sizeof(Real)));
+    GPU_Error_Check(cudaMemcpy(dev_snr_, snr.data(), snr.size() * sizeof(Real), cudaMemcpyHostToDevice));
 
   }
 
@@ -53,7 +53,7 @@ feedback::SNRateCalc::SNRateCalc(struct parameters& P)
  *
  * @param P reference to parameters struct. Passes in starburst 99 filepath
  */
-feedback::SWRateCalc::SWRateCalc(struct parameters& P)
+feedback::SWRateCalc::SWRateCalc(struct Parameters& P)
   : dev_sw_p_(nullptr),
     dev_sw_e_(nullptr),
     sw_dt_(0.0),
@@ -93,11 +93,11 @@ feedback::SWRateCalc::SWRateCalc(struct parameters& P)
   sw_dt_ = (time_sw_end_ - time_sw_start_) / (sw_p.size() - 1);
   chprintf("wind t_s %.5e, t_e %.5e, delta T %0.5e\n", time_sw_start_, time_sw_end_, sw_dt_);
 
-  CHECK(cudaMalloc((void**)&dev_sw_p_, sw_p.size() * sizeof(Real)));
-  CHECK(cudaMemcpy(dev_sw_p_, sw_p.data(), sw_p.size() * sizeof(Real), cudaMemcpyHostToDevice));
+  GPU_Error_Check(cudaMalloc((void**)&dev_sw_p_, sw_p.size() * sizeof(Real)));
+  GPU_Error_Check(cudaMemcpy(dev_sw_p_, sw_p.data(), sw_p.size() * sizeof(Real), cudaMemcpyHostToDevice));
 
-  CHECK(cudaMalloc((void**)&dev_sw_e_, sw_e.size() * sizeof(Real)));
-  CHECK(cudaMemcpy(dev_sw_e_, sw_e.data(), sw_e.size() * sizeof(Real), cudaMemcpyHostToDevice));
+  GPU_Error_Check(cudaMalloc((void**)&dev_sw_e_, sw_e.size() * sizeof(Real)));
+  GPU_Error_Check(cudaMemcpy(dev_sw_e_, sw_e.data(), sw_e.size() * sizeof(Real), cudaMemcpyHostToDevice));
 
   chprintf("first 40 stellar wind momentum values:\n");
   for (int i = 0; i < 40; i++) {

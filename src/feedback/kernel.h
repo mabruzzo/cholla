@@ -101,14 +101,14 @@ public:
   /* Allocates a new unique pointer that holds ``count`` entries of ``T`` */
   __host__ SimpleUniqueDevPtr(std::size_t count) {
     CHOLLA_ASSERT(count > 0, "count must be a positive integer");
-    CudaSafeCall(cudaMalloc(&ptr_, count * sizeof(T)));
+    GPU_Error_Check(cudaMalloc(&ptr_, count * sizeof(T)));
   }
 
   /* destructor. The memory is only deallocated when this is executed on the host */
   __host__ __device__ ~SimpleUniqueDevPtr() {
-#if !( (defined(_​_HIP_​DEVICE_​COMPILE_​_) && defined(O_HIP)) || (defined(__CUDA_ARCH__) && !defined(O_HIP)) )
-    CHECK(cudaDeviceSynchronize());  // ensure we can't deallocate a ptr that a kernel is currently using
-    if (ptr_ != nullptr) CHECK(cudaFree(ptr_));
+#if !( (defined(__HIP_DEVICE_COMPILE__) && defined(O_HIP)) || (defined(__CUDA_ARCH__) && !defined(O_HIP)) )
+    GPU_Error_Check(cudaDeviceSynchronize());  // ensure we can't deallocate a ptr that a kernel is currently using
+    if (ptr_ != nullptr) GPU_Error_Check(cudaFree(ptr_));
 #endif
   }
 
@@ -678,9 +678,9 @@ void Exec_Cluster_Feedback_Kernel(const feedback_details::ParticleProps& particl
 
   if (info != nullptr) {
     // copy summary data back to the host
-    CHECK(cudaMemcpy(info, d_info.data(), feedinfoLUT::LEN * sizeof(Real), cudaMemcpyDeviceToHost));
+    GPU_Error_Check(cudaMemcpy(info, d_info.data(), feedinfoLUT::LEN * sizeof(Real), cudaMemcpyDeviceToHost));
   } else {
-    CHECK(cudaDeviceSynchronize());
+    GPU_Error_Check(cudaDeviceSynchronize());
   }
 }
 

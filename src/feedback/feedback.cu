@@ -133,13 +133,13 @@ void ClusterFeedbackMethod<FeedbackModel>::operator()(Grid3D& G)
       hipLaunchKernelGGL(Get_SN_Count_Kernel, ngrid, TPB_FEEDBACK, 0, 0, G.Particles.n_local,
                          G.Particles.partIDs_dev, G.Particles.mass_dev, G.Particles.age_dev, cycle_props,
                          snr_calc_, d_num_SN.data());
-      CHECK(cudaDeviceSynchronize());
+      GPU_Error_Check(cudaDeviceSynchronize());
     } else {
       // in this branch, ``this->use_snr_calc_ == false``. This means that we assume all particles undergo
       // a supernova during the very first cycle. Then there is never another supernova
       if (G.H.n_step == 0) {
         std::vector<int> tmp(G.Particles.n_local, 1);
-        CHECK(cudaMemcpy(d_num_SN.data(), tmp.data(), sizeof(int)*G.Particles.n_local, cudaMemcpyHostToDevice));
+        GPU_Error_Check(cudaMemcpy(d_num_SN.data(), tmp.data(), sizeof(int)*G.Particles.n_local, cudaMemcpyHostToDevice));
       } else {
         // do nothing - the number of supernovae is already zero
       }
@@ -215,7 +215,7 @@ void ClusterFeedbackMethod<FeedbackModel>::operator()(Grid3D& G)
 #endif // the ifdef statement for Particle-stuff
 }
 
-std::function<void(Grid3D&)> feedback::configure_feedback_callback(struct parameters& P,
+std::function<void(Grid3D&)> feedback::configure_feedback_callback(struct Parameters& P,
                                                                    FeedbackAnalysis& analysis)
 {
 #if !(defined(FEEDBACK) && defined(PARTICLES_GPU) && defined(PARTICLE_AGE) && defined(PARTICLE_IDS))
