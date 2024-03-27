@@ -35,7 +35,7 @@ void PotentialParisGalactic::Get_Potential(const Real *const density, Real *cons
                                            const DiskGalaxy &galaxy)
 {
   const Real scale = Real(4) * M_PI * grav_const;
-  if (grav_const == GN) CHOLLA_ERROR("For consistency, grav_const must be equal to the GN macro");
+  if (grav_const != GN) CHOLLA_ERROR("For consistency, grav_const must be equal to the GN macro");
 
   assert(da_);
   // we are (presumably) defining aliases for this->da_ and this->db_ since the aliases
