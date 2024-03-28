@@ -41,10 +41,18 @@ struct DataPack {
   Real Rgas_truncation_radius;
 };
 
+namespace
+{
 Real Isothermal_Sound_Speed_CodeU(Real T, Real mu)
 {
   return sqrt(KB * T / (mu * MP)) * TIME_UNIT / LENGTH_UNIT;  // sound speed in kpc/kyr
 }
+
+Real Adiabatic_Sound_Speed_CodeU(Real T, Real mu, Real gamma)
+{
+  return sqrt(gamma * KB * T / (mu * MP)) * TIME_UNIT / LENGTH_UNIT;  // sound speed in kpc/kyr
+}
+}  // anonymous namespace
 
 void hydrostatic_ray_analytical_D3D(Real* rho, Real* r, const DataPack& hdp, Real dr, int nr, Real gamma, Real rho_eos,
                                     Real cs, Real r_cool);
@@ -58,12 +66,38 @@ class CGMInitializer
 {
  public:
   /*!
-   * Construct an instance of CGMInitializer
+   * Construct an instance of CGMInitializer (used for initializing the circumgalactic medium)
+   *
    * \param p The global parameter struct
    * \param data_pack A pack of assorted values
    * \param rho_eos_h The normalization gas density of the halo (at r_cool)
    * \param T_eos_h The normalization temperature of the halo (at r_cool)
    * \param r_cool cooling radius
+   *
+   * \par Overview
+   * We are computing the pressure and density profile for a spherically symmetric gas distribution
+   * in hydrostatic-equilibrium. We do some "fudging" to treat the static potential of a central
+   * galaxy's stellar disk as spherically symmetric. At this time of writing, we do NOT account for
+   * self-gravity of ANY gas in the simulation domain.
+   *
+   * \par
+   * For future generations, the common "general" solution to this calculation uses a CGM's EoS
+   * (equation of state) polytropic EoS.
+   *             `pressure = K * density^Gamma`
+   * A few notes:
+   * - Gamma (the uppercase Greek letter) is a constant sometimes called the polytropic index. (The
+   *   polytropic index sometimes refers to a related quantity used in different representation of the
+   *   exponent).
+   *     - For Gamma = 1, we would have a isothermal profile (all gas has constant temperature). In
+   *       this case, the hydrostatic density profile has a slightly different analytic form.
+   *     - We adopt Gamma = gamma (the lowercase letter refers to the adiabatic index). This
+   *       corresponds to an isentropic profile (all gas has constant entropy)
+   * - `K` is also a constant. It is commonly parameterized given by sound-speed, `cs` (the partial
+   *   derivative of pressure with respect to density): `K = cs^2 * density^(1-Gamma) / Gamma`
+   *
+   * \par Connections
+   * Aside, if the only source of gravity was the CGM's self gravity, we would be solving the
+   * Lane-Emden equation (an equation relevant for stellar structure)
    */
   CGMInitializer(const Parameters& p, const DataPack& data_pack, Real mu, Real rho_eos_h, Real T_eos_h, Real r_cool)
       : nr(1000),
@@ -73,25 +107,17 @@ class CGMInitializer
         K_eos_h(),
         gamma(data_pack.gamma)
   {
-    Real cs_h;
-    if (true) {
-      // we are using an isothermal sound speed even though the rest of this logic
-      // assumes an adiabatic structure. This is currently done for backwards
-      // compatability
-      cs_h = Isothermal_Sound_Speed_CodeU(T_eos_h, mu);  // sound speed in kpc/kyr
-    } else {
-      // we should implement the adiabatic sound speed
-    }
+    // earlier versions of this functionality set cs_h equal to the isothermal-sound-speed.
+    // (the consequence was that the target temperature wasn't actually being used)
+    const Real cs_h = Adiabatic_Sound_Speed_CodeU(T_eos_h, mu, this->gamma);
+    this->K_eos_h   = cs_h * cs_h * pow(rho_eos_h, 1.0 - this->gamma) / this->gamma;
 
-    // this assumes adiabatic structure
-    K_eos_h = cs_h * cs_h * pow(rho_eos_h, 1.0 - p.gamma) / p.gamma;
-
-    rho_halo.resize(nr, 0.0);
+    this->rho_halo.resize(nr, 0.0);
     r_halo.resize(nr, 0.0);
 
     chprintf("Generating hot halo lookup table generated ...\n");
-    hydrostatic_ray_analytical_D3D(rho_halo.data(), r_halo.data(), data_pack, dr, nr, this->gamma, rho_eos_h, cs_h,
-                                   r_cool);
+    hydrostatic_ray_analytical_D3D(rho_halo.data(), r_halo.data(), data_pack, this->dr, this->nr, this->gamma,
+                                   rho_eos_h, cs_h, r_cool);
     chprintf("Generating hot halo lookup table generated -- done\n");
   }
 
