@@ -102,9 +102,6 @@ class CGMInitializer
   CGMInitializer(const Parameters& p, const DataPack& data_pack, Real mu, Real rho_eos_h, Real T_eos_h, Real r_cool)
       : nr(1000),
         dr(sqrt(3) * 0.5 * fmax(p.xlen, p.zlen) / ((Real)nr)),
-        rho_halo(),
-        r_halo(),
-        K_eos_h(),
         gamma(data_pack.gamma)
   {
     // earlier versions of this functionality set cs_h equal to the isothermal-sound-speed.
@@ -837,7 +834,7 @@ void Grid3D::Disk_3D(Parameters p)
   Real K_eos, rho_eos, cs, rho_eos_h;
 
   // MW model
-  DiskGalaxy galaxy = galaxies::MW;
+  const DiskGalaxy& galaxy = galaxies::MW;
   // M82 model galaxies::M82;
 
   const MiyamotoNagaiPotential stellar_disk = galaxy.getStaticStellarDiskPotential();
@@ -856,17 +853,15 @@ void Grid3D::Disk_3D(Parameters p)
     CHOLLA_ERROR("unexpected disk temperature");
   }
 
-  if (true) {
-    chprintf("\nNominal Disk properties:\n");
-    chprintf("                                            Stellar            Gas\n");
-    chprintf("                                            -------          -------\n");
-    chprintf("scale length (kpc):                      %.7e    %.7e\n", stellar_disk.R_d, gas_disk.R_d);
-    chprintf("scale height (kpc):                      %.7e          - \n", stellar_disk.Z_d);
-    chprintf("total mass (Msolar):                     %.7e    %.7e\n", stellar_disk.M_d, gas_disk.M_d);
-    chprintf("central surface density (Msolar/kpc^2):        -          %.7e\n", Sigma_0);
+  chprintf("\nNominal Disk properties:\n");
+  chprintf("                                            Stellar            Gas\n");
+  chprintf("                                            -------          -------\n");
+  chprintf("scale length (kpc):                      %.7e    %.7e\n", stellar_disk.R_d, gas_disk.R_d);
+  chprintf("scale height (kpc):                      %.7e          - \n", stellar_disk.Z_d);
+  chprintf("total mass (Msolar):                     %.7e    %.7e\n", stellar_disk.M_d, gas_disk.M_d);
+  chprintf("central surface density (Msolar/kpc^2):        -          %.7e\n", Sigma_0);
 
-    chprintf("\n");
-  }
+  chprintf("\n");
 
   // EOS info
   cs = Isothermal_Sound_Speed_CodeU(T_d, mu);  // sound speed in kpc/kyr

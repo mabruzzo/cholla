@@ -49,11 +49,8 @@ class ODEIntegrator
       Real cur_step = std::min(xend - cur_x, nominal_step);
 
       // calculate the change in yvec over cur_step
-#if 1
       std::array<Real, N> d_yvec = calc_midpoint_step(cur_x, cur_yvec, cur_step);
-#else
-      std::array<Real, N> d_yvec = calc_rk4_step(cur_x, cur_yvec, cur_step);
-#endif
+      //std::array<Real, N> d_yvec = calc_rk4_step(cur_x, cur_yvec, cur_step);
 
       // potentially call the logger function
       if constexpr (not std::is_same_v<LogFn, ode_detail::NullFn>) {
@@ -135,7 +132,6 @@ class ODEIntegrator
     return d_yvec;
   }
 
- private:
   DerivFn deriv_fn_;
   LogFn log_fn_;
 };
@@ -385,7 +381,6 @@ class SelfGravHydroStaticColMaker
   /// @returns best estimate for the midplane mass-density
   Real construct_col_helper(Real cur_R, Real cur_Sigma, Real* buffer) const noexcept;
 
- private:
   int ghost_depth;
   ZGridProps z_grid_props;
   Real isoth_term;
