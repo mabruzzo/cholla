@@ -100,9 +100,7 @@ class CGMInitializer
    * Lane-Emden equation (an equation relevant for stellar structure)
    */
   CGMInitializer(const Parameters& p, const DataPack& data_pack, Real mu, Real rho_eos_h, Real T_eos_h, Real r_cool)
-      : nr(1000),
-        dr(sqrt(3) * 0.5 * fmax(p.xlen, p.zlen) / ((Real)nr)),
-        gamma(data_pack.gamma)
+      : nr(1000), dr(sqrt(3) * 0.5 * fmax(p.xlen, p.zlen) / ((Real)nr)), gamma(data_pack.gamma)
   {
     // earlier versions of this functionality set cs_h equal to the isothermal-sound-speed.
     // (the consequence was that the target temperature wasn't actually being used)

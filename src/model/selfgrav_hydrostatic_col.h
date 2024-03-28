@@ -50,7 +50,7 @@ class ODEIntegrator
 
       // calculate the change in yvec over cur_step
       std::array<Real, N> d_yvec = calc_midpoint_step(cur_x, cur_yvec, cur_step);
-      //std::array<Real, N> d_yvec = calc_rk4_step(cur_x, cur_yvec, cur_step);
+      // std::array<Real, N> d_yvec = calc_rk4_step(cur_x, cur_yvec, cur_step);
 
       // potentially call the logger function
       if constexpr (not std::is_same_v<LogFn, ode_detail::NullFn>) {
