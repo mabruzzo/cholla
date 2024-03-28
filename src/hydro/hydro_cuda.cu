@@ -628,14 +628,21 @@ __global__ void Temperature_Ceiling_Kernel(Real *conserved, int nx, int ny, int 
   const Real local_eint_ceil = d * specific_eint_ceil;
   const Real local_etot_ceil = local_eint_ceil + KE;
 
-  if (E > local_etot_ceil) conserved[grid_enum::Energy * n_cells + id] = local_etot_ceil;
+  bool applied_ceiling = false;
+
+  if (E > local_etot_ceil) {
+    conserved[grid_enum::Energy * n_cells + id] = local_etot_ceil;
+    applied_ceiling                             = true;
+  }
 
 #ifdef DE
   if (conserved[grid_enum::GasEnergy * n_cells + id] > local_eint_ceil) {
     conserved[grid_enum::GasEnergy * n_cells + id] = local_eint_ceil;
+    applied_ceiling                                = true;
   }
 #endif  // DE
-  atomicAdd(counter, 1);
+
+  if (applied_ceiling) atomicAdd(counter, 1);
 }
 
 void Temperature_Ceiling(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real gamma,
