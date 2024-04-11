@@ -167,9 +167,11 @@ void feedback::Init_State(struct Parameters* P)
         } else if (i == 1) {
           snr.push_back(pow(10, std::stof(std::string(data))) * 1000 / S_99_TOTAL_MASS);
         }
-        if (i > 0)
+
+        if (i > 0) {
           break;  // only care about the first 2 items.  Once i = 1 can break
                   // here.
+        }
         data = strtok(nullptr, s99_delim);
         i++;
       }
@@ -730,23 +732,27 @@ __device__ void Cluster_Feedback_Helper(part_int_t n_local, Real* pos_x_dev, Rea
   // when applying different types of feedback, undoing the step requires
   // reverising the order
   if (time_direction > 0) {
-    if (is_sn_feedback)
+    if (is_sn_feedback) {
       SN_Feedback(pos_x, pos_y, pos_z, age, mass_dev, id_dev, xMin, yMin, zMin, xMax, yMax, zMax, dx, dy, dz, nx_g,
                   ny_g, nz_g, n_ghost, n_step, t, dt, dti, dev_snr, snr_dt, time_sn_start, time_sn_end, prev_dens,
                   time_direction, s_info, conserved_dev, gamma, loop, indx_x, indx_y, indx_z);
-    if (is_wd_feedback)
+    }
+    if (is_wd_feedback) {
       Wind_Feedback(pos_x, pos_y, pos_z, age, mass_dev, id_dev, xMin, yMin, zMin, xMax, yMax, zMax, dx, dy, dz, nx_g,
                     ny_g, nz_g, n_ghost, n_step, t, dt, dti, dev_sw_p, dev_sw_e, sw_dt, time_sw_start, time_sw_end,
                     time_direction, s_info, conserved_dev, gamma, loop, indx_x, indx_y, indx_z);
+    }
   } else {
-    if (is_wd_feedback)
+    if (is_wd_feedback) {
       Wind_Feedback(pos_x, pos_y, pos_z, age, mass_dev, id_dev, xMin, yMin, zMin, xMax, yMax, zMax, dx, dy, dz, nx_g,
                     ny_g, nz_g, n_ghost, n_step, t, dt, dti, dev_sw_p, dev_sw_e, sw_dt, time_sw_start, time_sw_end,
                     time_direction, s_info, conserved_dev, gamma, loop, indx_x, indx_y, indx_z);
-    if (is_sn_feedback)
+    }
+    if (is_sn_feedback) {
       SN_Feedback(pos_x, pos_y, pos_z, age, mass_dev, id_dev, xMin, yMin, zMin, xMax, yMax, zMax, dx, dy, dz, nx_g,
                   ny_g, nz_g, n_ghost, n_step, t, dt, dti, dev_snr, snr_dt, time_sn_start, time_sn_end, prev_dens,
                   time_direction, s_info, conserved_dev, gamma, loop, indx_x, indx_y, indx_z);
+    }
   }
 
   return;
@@ -1097,7 +1103,7 @@ Real feedback::Cluster_Feedback(Grid3D& G, FeedbackAnalysis& analysis)
   #ifndef NO_SN_FEEDBACK
     Real global_resolved_ratio = 0.0;
     if (analysis.countResolved > 0 || analysis.countUnresolved > 0) {
-      global_resolved_ratio = analysis.countResolved / (analysis.countResolved + analysis.countUnresolved);
+      global_resolved_ratio = analysis.countResolved / double(analysis.countResolved + analysis.countUnresolved);
     }
     chprintf(": number of SN: %d,(R: %d, UR: %d)\n", (int)info[feedback::SN], (long)info[feedback::RESOLVED],
              (long)info[feedback::NOT_RESOLVED]);

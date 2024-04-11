@@ -1039,12 +1039,11 @@ StarClusterInitRsltPack disk_stellar_cluster_init_(std::mt19937_64 &generator, c
         continue;
       }
 
-      Real vPhi;
-      if (true) {
-        vPhi = std::sqrt(galaxies::MW.circular_vel2_with_selfgrav_estimates(R, z));
-      } else {
-        vPhi = std::sqrt(galaxies::MW.circular_vel2(R, z));
-      }
+  #ifdef GRAVITY
+      Real vPhi = std::sqrt(galaxies::MW.circular_vel2_with_selfgrav_estimates(R, z));
+  #else
+      Real vPhi = std::sqrt(galaxies::MW.circular_vel2(R, z));
+  #endif
 
       Real vx = -vPhi * sin(phi);
       Real vy = vPhi * cos(phi);
