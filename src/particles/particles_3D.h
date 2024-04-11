@@ -306,9 +306,7 @@ class Particles3D
 
   void Initialize_Isolated_Stellar_Cluster(struct Parameters *P);
 
-    #if defined(PARTICLE_AGE) && !defined(SINGLE_PARTICLE_MASS) && defined(PARTICLE_IDS)
   void Initialize_Disk_Stellar_Clusters(struct Parameters *P);
-    #endif
 
   void Initialize_Zeldovich_Pancake(struct Parameters *P);
 

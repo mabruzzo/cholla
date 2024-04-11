@@ -204,10 +204,8 @@ void Particles3D::Initialize(struct Parameters *P, Grav3D &Grav, Real xbound, Re
     Load_Particles_Data(P);
   } else if (strcmp(P->init, "Isolated_Stellar_Cluster") == 0) {
     Initialize_Isolated_Stellar_Cluster(P);
-  #if defined(PARTICLE_AGE) && !defined(SINGLE_PARTICLE_MASS) && defined(PARTICLE_IDS)
   } else if (strcmp(P->init, "Disk_3D_particles") == 0) {
     Initialize_Disk_Stellar_Clusters(P);
-  #endif
   }
 
   #ifdef MPI_CHOLLA
@@ -644,9 +642,9 @@ void Particles3D::Initialize_Sphere(struct Parameters *P)
 void Particles3D::Initialize_Stellar_Clusters_Helper_(std::map<std::string, real_vector_t> &real_props,
                                                       std::map<std::string, int_vector_t> &int_props)
 {
-  // come up with a list of expected particle-property names. prop_name_l[i].first indicates the
-  // name of a property and prop_name_l[i].second denotes whether it is Real
-  const std::vector<std::pair<std::string, bool>> expected_prop_l = {
+  // come up with a list of expected particle-property names. We opt to store this in a std::map
+  // (the keys denote the property name and the value denotes whether it is Real)
+  const std::map<std::string, bool> expected_prop_map = {
   #ifdef PARTICLE_AGE
       {"age", true},
   #endif
@@ -671,7 +669,9 @@ void Particles3D::Initialize_Stellar_Clusters_Helper_(std::map<std::string, real
   std::size_t expected_real_prop_count = 0;
   std::size_t expected_int_prop_count  = 0;
 
-  for (const auto &[name, is_real_prop] : expected_prop_l) {
+  // self-consistency checks 1 & 2: confirm that all of expected keys are present in the provided
+  //                                prop_maps & that all entries of prop_maps share a common length
+  for (const auto &[name, is_real_prop] : expected_prop_map) {
     part_int_t cur_size = 0;
     if (is_real_prop) {
       expected_real_prop_count++;
@@ -681,25 +681,29 @@ void Particles3D::Initialize_Stellar_Clusters_Helper_(std::map<std::string, real
       cur_size = query_prop_len(int_props, name);
     }
 
-    // TODO: start using CHOLLA_ERROR in the following branches!
     if (cur_size < 0) {
       std::string type_string = (is_real_prop) ? "Real" : "int";
-      chprintf("Expected the %s property to be specified as a %s-type property", name.c_str(), type_string.c_str());
-      exit(1);
+      CHOLLA_ERROR("Expected the %s property to be specified as a %s-type property", name.c_str(), type_string.c_str());
     } else if (cur_size != n_local) {
-      chprintf("the %s property has a length of %lld. Other properties have a length of %lld", name.c_str(),
-               (long long)(cur_size), (long long)(n_local));
-      exit(1);
+      CHOLLA_ERROR("the %s property has a length of %lld. Other properties have a length of %lld", name.c_str(),
+                   (long long)(cur_size), (long long)(n_local));
     }
   }
 
+  // self-consistency checks 3: confirm that the provided prop_maps don't provide unexpected keys
   if ((expected_int_prop_count != int_props.size()) or (expected_real_prop_count != real_props.size())) {
-    // TODO: start using CHOLLA_ERROR
-    chprintf(
-        "%zu Real particle properties were provided -- %zu were expected. "
-        "%zu integer particle properties were provided -- %zu were expected.",
-        real_props.size(), expected_real_prop_count, int_props.size(), expected_int_prop_count);
-    exit(1);
+    for (const auto &[name, dummy] : int_props) {
+      auto rslt = expected_prop_map.find(name);
+      // recall: `rslt->second` encodes whether the property is expected to be a `Real` or an `int`
+      CHOLLA_ASSERT((rslt != expected_prop_map.end()) and (not rslt->second),
+                    "Current configuration not equipped to handle an int property called %s", name.c_str());
+    }
+    for (const auto &[name, dummy] : real_props) {
+      auto rslt = expected_prop_map.find(name);
+      // recall: `rslt->second` encodes whether the property is expected to be a `Real` or an `int`
+      CHOLLA_ASSERT((rslt != expected_prop_map.end()) and rslt->second,
+                    "Current configuration not equipped to handle a Real property called %s", name.c_str());
+    }
   }
 
   #ifdef PARTICLES_CPU
@@ -1079,13 +1083,15 @@ StarClusterInitRsltPack disk_stellar_cluster_init_(std::mt19937_64 &generator, c
 
 }  // anonymous namespace
 
-  #if defined(PARTICLE_AGE) && !defined(SINGLE_PARTICLE_MASS) && defined(PARTICLE_IDS)
-
 /**
  *   Initializes a disk population of stellar clusters
  */
 void Particles3D::Initialize_Disk_Stellar_Clusters(struct Parameters *P)
 {
+  // this function makes certain implicit assumptions about the present particle
+  // properties (e.g. "age", "mass", "ids"). These assumptions are explicitly checked
+  // for us within Initialize_Stellar_Clusters_Helper_ at runtime
+
   chprintf(" Initializing Particles Stellar Disk\n");
 
   // Set up the PRNG
@@ -1106,7 +1112,6 @@ void Particles3D::Initialize_Disk_Stellar_Clusters(struct Parameters *P)
 
   this->Initialize_Stellar_Clusters_Helper_(pack.real_props, pack.int_props);
 }
-  #endif
 
 void Particles3D::Initialize_Zeldovich_Pancake(struct Parameters *P)
 {
