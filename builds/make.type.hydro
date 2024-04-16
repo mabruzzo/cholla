@@ -16,7 +16,7 @@ endif
 DFLAGS    += -DDENSITY_FLOOR
 DFLAGS    += -DTEMPERATURE_FLOOR
 
-# Solve the Gas Internal Energy usisng a Dual Energy Formalism
+# Solve the Gas Internal Energy using a Dual Energy Formalism
 #DFLAGS    += -DDE
 
 # Apply cooling on the GPU from precomputed tables
