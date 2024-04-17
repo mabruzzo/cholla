@@ -441,7 +441,7 @@ class Grid3D
 
   /*! \fn void Get_Position(long i, long j, long k, Real *xpos, Real *ypos, Real
    * *zpos) \brief Get the cell-centered position based on cell index */
-  void Get_Position(long i, long j, long k, Real *xpos, Real *ypos, Real *zpos);
+  void Get_Position(long i, long j, long k, Real *xpos, Real *ypos, Real *zpos) const;
 
   Real Calc_Inverse_Timestep();
 
@@ -776,7 +776,7 @@ class Grid3D
   void Add_Analytic_Potential();
   void Add_Analytic_Potential(int g_start, int g_end);
   void Setup_Analytic_Potential(struct Parameters *P);
-  void Setup_Analytic_Galaxy_Potential(int g_start, int g_end, DiskGalaxy &gal);
+  void Setup_Analytic_Galaxy_Potential(int g_start, int g_end, const DiskGalaxy &gal);
   #ifdef GRAVITY_GPU
   void Add_Analytic_Potential_GPU();
   #endif

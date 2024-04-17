@@ -185,6 +185,27 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
     Parse_Param(name, value, parms);
     chprintf("Override with %s=%s\n", name, value);
   }
+#ifdef TEMPERATURE_FLOOR
+  if (parms->temperature_floor == 0) {
+    chprintf(
+        "WARNING: temperature floor is set to its default value (zero)! It can be set to a different value in the "
+        "input parameter file.\n");
+  }
+#endif
+#ifdef DENSITY_FLOOR
+  if (parms->density_floor == 0) {
+    chprintf(
+        "WARNING: density floor is set to its default value (zero)! It can be set to a different value in the input "
+        "parameter file.\n");
+  }
+#endif
+#ifdef SCALAR_FLOOR
+  if (parms->scalar_floor == 0) {
+    chprintf(
+        "WARNING: scalar floor is set to its default value (zero)! It can be set to a different value in the input "
+        "parameter file.\n");
+  }
+#endif
 }
 
 /*! \fn void Parse_Param(char *name,char *value, struct Parameters *parms);
@@ -262,6 +283,8 @@ void Parse_Param(char *name, char *value, struct Parameters *parms)
     int tmp = atoi(value);
     CHOLLA_ASSERT((tmp == 0) or (tmp == 1), "legacy_flat_outdir must be 1 or 0.");
     parms->legacy_flat_outdir = tmp;
+  } else if (strcmp(name, "n_steps_limit") == 0) {
+    parms->n_steps_limit = atof(value);
   } else if (strcmp(name, "xmin") == 0) {
     parms->xmin = atof(value);
   } else if (strcmp(name, "ymin") == 0) {
@@ -455,29 +478,14 @@ void Parse_Param(char *name, char *value, struct Parameters *parms)
 #ifdef TEMPERATURE_FLOOR
   } else if (strcmp(name, "temperature_floor") == 0) {
     parms->temperature_floor = atof(value);
-    if (parms->temperature_floor == 0) {
-      chprintf(
-          "WARNING: temperature floor is set to its default value (zero)! It can be set to a different value in the "
-          "input parameter file.\n");
-    }
 #endif
 #ifdef DENSITY_FLOOR
   } else if (strcmp(name, "density_floor") == 0) {
     parms->density_floor = atof(value);
-    if (parms->density_floor == 0) {
-      chprintf(
-          "WARNING: density floor is set to its default value (zero)! It can be set to a different value in the input "
-          "parameter file.\n");
-    }
 #endif
 #ifdef SCALAR_FLOOR
   } else if (strcmp(name, "scalar_floor") == 0) {
     parms->scalar_floor = atof(value);
-    if (parms->scalar_floor == 0) {
-      chprintf(
-          "WARNING: scalar floor is set to its default value (zero)! It can be set to a different value in the input "
-          "parameter file.\n");
-    }
 #endif
 #ifdef ANALYSIS
   } else if (strcmp(name, "analysis_scale_outputs_file") == 0) {
