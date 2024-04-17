@@ -106,7 +106,7 @@ __global__ void PPMC_CTU(Real *dev_conserved, Real *dev_bounds_L, Real *dev_boun
   hydro_utilities::Primitive del_C = reconstruction::Compute_Slope(cell_im2, cell_i, 0.5);
 
   // Van Leer
-  hydro_utilities::Primitive del_G = reconstruction::Van_Leer_Slope(del_L, del_R);
+  hydro_utilities::Primitive del_G = reconstruction::Compute_Van_Leer_Slope(del_L, del_R);
 
   // Step 3 - Project the left, right, centered and van Leer differences onto the
   // characteristic variables Stone Eqn 37 (del_a are differences in
@@ -151,7 +151,7 @@ __global__ void PPMC_CTU(Real *dev_conserved, Real *dev_bounds_L, Real *dev_boun
   del_C = reconstruction::Compute_Slope(cell_im1, cell_ip1, 0.5);
 
   // Van Leer
-  del_G = reconstruction::Van_Leer_Slope(del_L, del_R);
+  del_G = reconstruction::Compute_Van_Leer_Slope(del_L, del_R);
 
   // Step 3 - Project the left, right, centered and van Leer differences onto the
   // characteristic variables Stone Eqn 37 (del_a are differences in
@@ -196,7 +196,7 @@ __global__ void PPMC_CTU(Real *dev_conserved, Real *dev_bounds_L, Real *dev_boun
   del_C = reconstruction::Compute_Slope(cell_i, cell_ip2, 0.5);
 
   // Van Leer
-  del_G = reconstruction::Van_Leer_Slope(del_L, del_R);
+  del_G = reconstruction::Compute_Van_Leer_Slope(del_L, del_R);
 
   // Step 3 - Project the left, right, centered and van Leer differences onto the
   // characteristic variables Stone Eqn 37 (del_a are differences in

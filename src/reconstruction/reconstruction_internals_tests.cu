@@ -296,7 +296,7 @@ TEST(tALLReconstructionVanLeerSlope, CorrectInputExpectCorrectOutput)
 #endif  // MHD
 
   // Get test data
-  auto test_data = reconstruction::Van_Leer_Slope(left, right);
+  auto test_data = reconstruction::Compute_Van_Leer_Slope(left, right);
 
   // Check results
 #ifdef MHD

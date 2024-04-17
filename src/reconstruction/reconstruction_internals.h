@@ -269,8 +269,8 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Compute_Slope(hydro_ut
  * \param[in] right_slope The right slope
  * \return hydro_utilities::Primitive The Van Leer slope
  */
-hydro_utilities::Primitive __device__ __host__ __inline__ Van_Leer_Slope(hydro_utilities::Primitive const &left_slope,
-                                                                         hydro_utilities::Primitive const &right_slope)
+hydro_utilities::Primitive __device__ __host__ __inline__ Compute_Van_Leer_Slope(
+    hydro_utilities::Primitive const &left_slope, hydro_utilities::Primitive const &right_slope)
 {
   hydro_utilities::Primitive vl_slopes;
 

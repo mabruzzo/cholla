@@ -96,7 +96,7 @@ __global__ __launch_bounds__(TPB) void PLMC_cuda(Real *dev_conserved, Real *dev_
   hydro_utilities::Primitive const del_C = reconstruction::Compute_Slope(cell_imo, cell_ipo, 0.5);
 
   // Van Leer
-  hydro_utilities::Primitive const del_G = reconstruction::Van_Leer_Slope(del_L, del_R);
+  hydro_utilities::Primitive const del_G = reconstruction::Compute_Van_Leer_Slope(del_L, del_R);
 
   // Project the left, right, centered and van Leer differences onto the
   // characteristic variables Stone Eqn 37 (del_a are differences in
