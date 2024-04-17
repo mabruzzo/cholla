@@ -185,17 +185,18 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Load_Data(
 
 // Load pressure accounting for duel energy if enabled
 #ifdef DE  // DE
-  Real const E          = dev_conserved[grid_enum::Energy * n_cells + id];
+  Real const energy     = dev_conserved[grid_enum::Energy * n_cells + id];
   Real const gas_energy = dev_conserved[grid_enum::GasEnergy * n_cells + id];
 
-  Real E_non_thermal = hydro_utilities::Calc_Kinetic_Energy_From_Velocity(
+  Real energy_non_thermal = hydro_utilities::Calc_Kinetic_Energy_From_Velocity(
       loaded_data.density, loaded_data.velocity.x, loaded_data.velocity.y, loaded_data.velocity.z);
 
   #ifdef MHD
-  E_non_thermal += mhd::utils::computeMagneticEnergy(magnetic_centered.x, magnetic_centered.y, magnetic_centered.z);
+  energy_non_thermal +=
+      mhd::utils::computeMagneticEnergy(magnetic_centered.x, magnetic_centered.y, magnetic_centered.z);
   #endif  // MHD
 
-  loaded_data.pressure            = hydro_utilities::Get_Pressure_From_DE(E, E - E_non_thermal, gas_energy, gamma);
+  loaded_data.pressure = hydro_utilities::Get_Pressure_From_DE(energy, energy - energy_non_thermal, gas_energy, gamma);
   loaded_data.gas_energy_specific = gas_energy / loaded_data.density;
 #else  // not DE
   #ifdef MHD
