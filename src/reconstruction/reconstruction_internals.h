@@ -183,7 +183,7 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Load_Data(
   }
 #endif  // MHD
 
-// Load pressure accounting for duel energy if enabled
+// Load pressure accounting for dual energy if enabled
 #ifdef DE  // DE
   Real const energy     = dev_conserved[grid_enum::Energy * n_cells + id];
   Real const gas_energy = dev_conserved[grid_enum::GasEnergy * n_cells + id];
