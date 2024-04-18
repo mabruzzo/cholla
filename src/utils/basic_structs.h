@@ -76,7 +76,8 @@ struct Primitive {
 
   /// Default constructor, should init everything to zero
   Primitive() = default;
-  /// Manual constructor, mostly used for testing and doesn't init all members
+  /// Manual constructor, mostly used for testing and doesn't init all members. The `in_` prefix stands for input,
+  /// mostly to avoid name collision with the member variables
   Primitive(Real const in_density, Vector const &in_velocity, Real const in_pressure,
             Vector const &in_magnetic = {0, 0, 0}, Real const in_gas_energy_specific = 0.0)
       : density(in_density), velocity(in_velocity), pressure(in_pressure)

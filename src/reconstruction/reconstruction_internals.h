@@ -74,7 +74,8 @@ struct EigenVecs {
 
 // =====================================================================================================================
 /*!
- * \brief A struct for the characteristic variables
+ * \brief A struct for the characteristic variables. We use the same notation as Stone et al. 2008 where the variable
+ # `ai` is the ith characteristic variable.
  *
  */
 struct Characteristic {
