@@ -199,15 +199,15 @@ inline __host__ __device__ Real alfvenSpeed(Real const &magneticX, Real const &d
  * \param[out] avgBy The cell centered average magnetic field in the y-direction
  * \param[out] avgBz The cell centered average magnetic field in the z-direction
  *
- * \return hydro_utilities::Vector with the X, Y, and Z cell centered magnetic
+ * \return hydro_utilities::VectorXYZ with the X, Y, and Z cell centered magnetic
  * fields. Can be called with structured binding like `auto [x, y,
  * z] = mhd::utils::cellCenteredMagneticFields(*args*)
  */
-inline __host__ __device__ hydro_utilities::Vector cellCenteredMagneticFields(Real const *dev_conserved,
-                                                                              size_t const &id, size_t const &xid,
-                                                                              size_t const &yid, size_t const &zid,
-                                                                              size_t const &n_cells, size_t const &nx,
-                                                                              size_t const &ny)
+inline __host__ __device__ hydro_utilities::VectorXYZ cellCenteredMagneticFields(Real const *dev_conserved,
+                                                                                 size_t const &id, size_t const &xid,
+                                                                                 size_t const &yid, size_t const &zid,
+                                                                                 size_t const &n_cells,
+                                                                                 size_t const &nx, size_t const &ny)
 {
   // Ternary operator to check that no values outside of the magnetic field
   // arrays are loaded. If the cell is on the edge that doesn't have magnetic

@@ -20,7 +20,7 @@ namespace hydro_utilities
  * \brief A data only struct that contains the Real members x, y, and z for usage as a vector
  *
  */
-struct Vector {
+struct VectorXYZ {
   Real x, y, z;
 };
 // =====================================================================================================================
@@ -33,11 +33,11 @@ struct Vector {
 struct Conserved {
   // Hydro variables
   Real density, energy;
-  Vector momentum;
+  VectorXYZ momentum;
 
 #ifdef MHD
   // These are all cell centered values
-  Vector magnetic;
+  VectorXYZ magnetic;
 #endif  // MHD
 
 #ifdef DE
@@ -58,11 +58,11 @@ struct Conserved {
 struct Primitive {
   // Hydro variables
   Real density, pressure;
-  Vector velocity;
+  VectorXYZ velocity;
 
 #ifdef MHD
   // These are all cell centered values
-  Vector magnetic;
+  VectorXYZ magnetic;
 #endif  // MHD
 
 #ifdef DE
@@ -78,8 +78,8 @@ struct Primitive {
   Primitive() = default;
   /// Manual constructor, mostly used for testing and doesn't init all members. The `in_` prefix stands for input,
   /// mostly to avoid name collision with the member variables
-  Primitive(Real const in_density, Vector const &in_velocity, Real const in_pressure,
-            Vector const &in_magnetic = {0, 0, 0}, Real const in_gas_energy_specific = 0.0)
+  Primitive(Real const in_density, VectorXYZ const &in_velocity, Real const in_pressure,
+            VectorXYZ const &in_magnetic = {0, 0, 0}, Real const in_gas_energy_specific = 0.0)
       : density(in_density), velocity(in_velocity), pressure(in_pressure)
   {
 #ifdef MHD
