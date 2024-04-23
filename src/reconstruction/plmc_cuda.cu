@@ -130,25 +130,25 @@ __global__ __launch_bounds__(TPB) void PLMC_cuda(Real *dev_conserved, Real *dev_
 
   // Compute the eigenvalues of the linearized equations in the
   // primitive variables using the cell-centered primitive variables
-  Real const lambda_m = cell_i.velocity.x - sound_speed;
-  Real const lambda_0 = cell_i.velocity.x;
-  Real const lambda_p = cell_i.velocity.x + sound_speed;
+  Real const lambda_m = cell_i.velocity.x() - sound_speed;
+  Real const lambda_0 = cell_i.velocity.x();
+  Real const lambda_p = cell_i.velocity.x() + sound_speed;
 
   // Integrate linear interpolation function over domain of dependence
   // defined by max(min) eigenvalue
-  Real qx                    = -0.5 * fmin(lambda_m, 0.0) * dtodx;
-  interface_R_imh.density    = interface_R_imh.density + qx * del_m_i.density;
-  interface_R_imh.velocity.x = interface_R_imh.velocity.x + qx * del_m_i.velocity.x;
-  interface_R_imh.velocity.y = interface_R_imh.velocity.y + qx * del_m_i.velocity.y;
-  interface_R_imh.velocity.z = interface_R_imh.velocity.z + qx * del_m_i.velocity.z;
-  interface_R_imh.pressure   = interface_R_imh.pressure + qx * del_m_i.pressure;
+  Real qx                      = -0.5 * fmin(lambda_m, 0.0) * dtodx;
+  interface_R_imh.density      = interface_R_imh.density + qx * del_m_i.density;
+  interface_R_imh.velocity.x() = interface_R_imh.velocity.x() + qx * del_m_i.velocity.x();
+  interface_R_imh.velocity.y() = interface_R_imh.velocity.y() + qx * del_m_i.velocity.y();
+  interface_R_imh.velocity.z() = interface_R_imh.velocity.z() + qx * del_m_i.velocity.z();
+  interface_R_imh.pressure     = interface_R_imh.pressure + qx * del_m_i.pressure;
 
-  qx                         = 0.5 * fmax(lambda_p, 0.0) * dtodx;
-  interface_L_iph.density    = interface_L_iph.density - qx * del_m_i.density;
-  interface_L_iph.velocity.x = interface_L_iph.velocity.x - qx * del_m_i.velocity.x;
-  interface_L_iph.velocity.y = interface_L_iph.velocity.y - qx * del_m_i.velocity.y;
-  interface_L_iph.velocity.z = interface_L_iph.velocity.z - qx * del_m_i.velocity.z;
-  interface_L_iph.pressure   = interface_L_iph.pressure - qx * del_m_i.pressure;
+  qx                           = 0.5 * fmax(lambda_p, 0.0) * dtodx;
+  interface_L_iph.density      = interface_L_iph.density - qx * del_m_i.density;
+  interface_L_iph.velocity.x() = interface_L_iph.velocity.x() - qx * del_m_i.velocity.x();
+  interface_L_iph.velocity.y() = interface_L_iph.velocity.y() - qx * del_m_i.velocity.y();
+  interface_L_iph.velocity.z() = interface_L_iph.velocity.z() - qx * del_m_i.velocity.z();
+  interface_L_iph.pressure     = interface_L_iph.pressure - qx * del_m_i.pressure;
 
   #ifdef DE
   interface_R_imh.gas_energy_specific = interface_R_imh.gas_energy_specific + qx * del_m_i.gas_energy_specific;
@@ -179,17 +179,17 @@ __global__ __launch_bounds__(TPB) void PLMC_cuda(Real *dev_conserved, Real *dev_
   if (lambda_m >= 0) {
     Real lamdiff = lambda_p - lambda_m;
 
-    sum_0 += lamdiff *
-             (-cell_i.density * del_m_i.velocity.x / (2 * sound_speed) + del_m_i.pressure / (2 * sound_speed_squared));
-    sum_1 += lamdiff * (del_m_i.velocity.x / 2.0 - del_m_i.pressure / (2 * sound_speed * cell_i.density));
-    sum_4 += lamdiff * (-cell_i.density * del_m_i.velocity.x * sound_speed / 2.0 + del_m_i.pressure / 2.0);
+    sum_0 += lamdiff * (-cell_i.density * del_m_i.velocity.x() / (2 * sound_speed) +
+                        del_m_i.pressure / (2 * sound_speed_squared));
+    sum_1 += lamdiff * (del_m_i.velocity.x() / 2.0 - del_m_i.pressure / (2 * sound_speed * cell_i.density));
+    sum_4 += lamdiff * (-cell_i.density * del_m_i.velocity.x() * sound_speed / 2.0 + del_m_i.pressure / 2.0);
   }
   if (lambda_0 >= 0) {
     Real lamdiff = lambda_p - lambda_0;
 
     sum_0 += lamdiff * (del_m_i.density - del_m_i.pressure / (sound_speed_squared));
-    sum_2 += lamdiff * del_m_i.velocity.y;
-    sum_3 += lamdiff * del_m_i.velocity.z;
+    sum_2 += lamdiff * del_m_i.velocity.y();
+    sum_3 += lamdiff * del_m_i.velocity.z();
   #ifdef DE
     sum_ge += lamdiff * del_m_i.gas_energy_specific;
   #endif  // DE
@@ -203,16 +203,16 @@ __global__ __launch_bounds__(TPB) void PLMC_cuda(Real *dev_conserved, Real *dev_
     Real lamdiff = lambda_p - lambda_p;
 
     sum_0 += lamdiff *
-             (cell_i.density * del_m_i.velocity.x / (2 * sound_speed) + del_m_i.pressure / (2 * sound_speed_squared));
-    sum_1 += lamdiff * (del_m_i.velocity.x / 2.0 + del_m_i.pressure / (2 * sound_speed * cell_i.density));
-    sum_4 += lamdiff * (cell_i.density * del_m_i.velocity.x * sound_speed / 2.0 + del_m_i.pressure / 2.0);
+             (cell_i.density * del_m_i.velocity.x() / (2 * sound_speed) + del_m_i.pressure / (2 * sound_speed_squared));
+    sum_1 += lamdiff * (del_m_i.velocity.x() / 2.0 + del_m_i.pressure / (2 * sound_speed * cell_i.density));
+    sum_4 += lamdiff * (cell_i.density * del_m_i.velocity.x() * sound_speed / 2.0 + del_m_i.pressure / 2.0);
   }
 
   // add the corrections to the initial guesses for the interface values
   interface_L_iph.density += 0.5 * dtodx * sum_0;
-  interface_L_iph.velocity.x += 0.5 * dtodx * sum_1;
-  interface_L_iph.velocity.y += 0.5 * dtodx * sum_2;
-  interface_L_iph.velocity.z += 0.5 * dtodx * sum_3;
+  interface_L_iph.velocity.x() += 0.5 * dtodx * sum_1;
+  interface_L_iph.velocity.y() += 0.5 * dtodx * sum_2;
+  interface_L_iph.velocity.z() += 0.5 * dtodx * sum_3;
   interface_L_iph.pressure += 0.5 * dtodx * sum_4;
   #ifdef DE
   interface_L_iph.gas_energy_specific += 0.5 * dtodx * sum_ge;
@@ -236,17 +236,17 @@ __global__ __launch_bounds__(TPB) void PLMC_cuda(Real *dev_conserved, Real *dev_
   if (lambda_m <= 0) {
     Real lamdiff = lambda_m - lambda_m;
 
-    sum_0 += lamdiff *
-             (-cell_i.density * del_m_i.velocity.x / (2 * sound_speed) + del_m_i.pressure / (2 * sound_speed_squared));
-    sum_1 += lamdiff * (del_m_i.velocity.x / 2.0 - del_m_i.pressure / (2 * sound_speed * cell_i.density));
-    sum_4 += lamdiff * (-cell_i.density * del_m_i.velocity.x * sound_speed / 2.0 + del_m_i.pressure / 2.0);
+    sum_0 += lamdiff * (-cell_i.density * del_m_i.velocity.x() / (2 * sound_speed) +
+                        del_m_i.pressure / (2 * sound_speed_squared));
+    sum_1 += lamdiff * (del_m_i.velocity.x() / 2.0 - del_m_i.pressure / (2 * sound_speed * cell_i.density));
+    sum_4 += lamdiff * (-cell_i.density * del_m_i.velocity.x() * sound_speed / 2.0 + del_m_i.pressure / 2.0);
   }
   if (lambda_0 <= 0) {
     Real lamdiff = lambda_m - lambda_0;
 
     sum_0 += lamdiff * (del_m_i.density - del_m_i.pressure / (sound_speed_squared));
-    sum_2 += lamdiff * del_m_i.velocity.y;
-    sum_3 += lamdiff * del_m_i.velocity.z;
+    sum_2 += lamdiff * del_m_i.velocity.y();
+    sum_3 += lamdiff * del_m_i.velocity.z();
   #ifdef DE
     sum_ge += lamdiff * del_m_i.gas_energy_specific;
   #endif  // DE
@@ -260,16 +260,16 @@ __global__ __launch_bounds__(TPB) void PLMC_cuda(Real *dev_conserved, Real *dev_
     Real lamdiff = lambda_m - lambda_p;
 
     sum_0 += lamdiff *
-             (cell_i.density * del_m_i.velocity.x / (2 * sound_speed) + del_m_i.pressure / (2 * sound_speed_squared));
-    sum_1 += lamdiff * (del_m_i.velocity.x / 2.0 + del_m_i.pressure / (2 * sound_speed * cell_i.density));
-    sum_4 += lamdiff * (cell_i.density * del_m_i.velocity.x * sound_speed / 2.0 + del_m_i.pressure / 2.0);
+             (cell_i.density * del_m_i.velocity.x() / (2 * sound_speed) + del_m_i.pressure / (2 * sound_speed_squared));
+    sum_1 += lamdiff * (del_m_i.velocity.x() / 2.0 + del_m_i.pressure / (2 * sound_speed * cell_i.density));
+    sum_4 += lamdiff * (cell_i.density * del_m_i.velocity.x() * sound_speed / 2.0 + del_m_i.pressure / 2.0);
   }
 
   // add the corrections
   interface_R_imh.density += 0.5 * dtodx * sum_0;
-  interface_R_imh.velocity.x += 0.5 * dtodx * sum_1;
-  interface_R_imh.velocity.y += 0.5 * dtodx * sum_2;
-  interface_R_imh.velocity.z += 0.5 * dtodx * sum_3;
+  interface_R_imh.velocity.x() += 0.5 * dtodx * sum_1;
+  interface_R_imh.velocity.y() += 0.5 * dtodx * sum_2;
+  interface_R_imh.velocity.z() += 0.5 * dtodx * sum_3;
   interface_R_imh.pressure += 0.5 * dtodx * sum_4;
   #ifdef DE
   interface_R_imh.gas_energy_specific += 0.5 * dtodx * sum_ge;

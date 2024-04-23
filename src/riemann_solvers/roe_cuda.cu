@@ -70,11 +70,11 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
   // Each thread executes the solver independently
   if (xid < nx && yid < ny && zid < nz) {
     // retrieve conserved variables
-    left_state.density    = dev_bounds_L[tid];
-    left_state.momentum.x = dev_bounds_L[o1 * n_cells + tid];
-    left_state.momentum.y = dev_bounds_L[o2 * n_cells + tid];
-    left_state.momentum.z = dev_bounds_L[o3 * n_cells + tid];
-    left_state.energy     = dev_bounds_L[4 * n_cells + tid];
+    left_state.density      = dev_bounds_L[tid];
+    left_state.momentum.x() = dev_bounds_L[o1 * n_cells + tid];
+    left_state.momentum.y() = dev_bounds_L[o2 * n_cells + tid];
+    left_state.momentum.z() = dev_bounds_L[o3 * n_cells + tid];
+    left_state.energy       = dev_bounds_L[4 * n_cells + tid];
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
       dscalarl[i] = dev_bounds_L[(5 + i) * n_cells + tid];
@@ -84,11 +84,11 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
     dgel = dev_bounds_L[(n_fields - 1) * n_cells + tid];
 #endif
 
-    right_state.density    = dev_bounds_R[tid];
-    right_state.momentum.x = dev_bounds_R[o1 * n_cells + tid];
-    right_state.momentum.y = dev_bounds_R[o2 * n_cells + tid];
-    right_state.momentum.z = dev_bounds_R[o3 * n_cells + tid];
-    right_state.energy     = dev_bounds_R[4 * n_cells + tid];
+    right_state.density      = dev_bounds_R[tid];
+    right_state.momentum.x() = dev_bounds_R[o1 * n_cells + tid];
+    right_state.momentum.y() = dev_bounds_R[o2 * n_cells + tid];
+    right_state.momentum.z() = dev_bounds_R[o3 * n_cells + tid];
+    right_state.energy       = dev_bounds_R[4 * n_cells + tid];
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
       dscalarr[i] = dev_bounds_R[(5 + i) * n_cells + tid];
@@ -99,20 +99,20 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
 #endif
 
     // calculate primitive variables
-    left_state.velocity.x = left_state.momentum.x / left_state.density;
-    left_state.velocity.y = left_state.momentum.y / left_state.density;
-    left_state.velocity.z = left_state.momentum.z / left_state.density;
+    left_state.velocity.x() = left_state.momentum.x() / left_state.density;
+    left_state.velocity.y() = left_state.momentum.y() / left_state.density;
+    left_state.velocity.z() = left_state.momentum.z() / left_state.density;
 #ifdef DE  // PRESSURE_DE
     E_kin = 0.5 * left_state.density *
-            (left_state.velocity.x * left_state.velocity.x + left_state.velocity.y * left_state.velocity.y +
-             left_state.velocity.z * left_state.velocity.z);
+            (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
+             left_state.velocity.z() * left_state.velocity.z());
     left_state.pressure =
         hydro_utilities::Get_Pressure_From_DE(left_state.energy, left_state.energy - E_kin, dgel, gamma);
 #else
     left_state.pressure = (left_state.energy - 0.5 * left_state.density *
-                                                   (left_state.velocity.x * left_state.velocity.x +
-                                                    left_state.velocity.y * left_state.velocity.y +
-                                                    left_state.velocity.z * left_state.velocity.z)) *
+                                                   (left_state.velocity.x() * left_state.velocity.x() +
+                                                    left_state.velocity.y() * left_state.velocity.y() +
+                                                    left_state.velocity.z() * left_state.velocity.z())) *
                           (gamma - 1.0);
 #endif  // PRESSURE_DE
     left_state.pressure = fmax(left_state.pressure, (Real)TINY_NUMBER);
@@ -124,20 +124,20 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
 #ifdef DE
     left_state.gas_energy_specific = dgel / left_state.density;
 #endif
-    right_state.velocity.x = right_state.momentum.x / right_state.density;
-    right_state.velocity.y = right_state.momentum.y / right_state.density;
-    right_state.velocity.z = right_state.momentum.z / right_state.density;
+    right_state.velocity.x() = right_state.momentum.x() / right_state.density;
+    right_state.velocity.y() = right_state.momentum.y() / right_state.density;
+    right_state.velocity.z() = right_state.momentum.z() / right_state.density;
 #ifdef DE  // PRESSURE_DE
     E_kin = 0.5 * right_state.density *
-            (right_state.velocity.x * right_state.velocity.x + right_state.velocity.y * right_state.velocity.y +
-             right_state.velocity.z * right_state.velocity.z);
+            (right_state.velocity.x() * right_state.velocity.x() + right_state.velocity.y() * right_state.velocity.y() +
+             right_state.velocity.z() * right_state.velocity.z());
     right_state.pressure =
         hydro_utilities::Get_Pressure_From_DE(right_state.energy, right_state.energy - E_kin, dger, gamma);
 #else
     right_state.pressure = (right_state.energy - 0.5 * right_state.density *
-                                                     (right_state.velocity.x * right_state.velocity.x +
-                                                      right_state.velocity.y * right_state.velocity.y +
-                                                      right_state.velocity.z * right_state.velocity.z)) *
+                                                     (right_state.velocity.x() * right_state.velocity.x() +
+                                                      right_state.velocity.y() * right_state.velocity.y() +
+                                                      right_state.velocity.z() * right_state.velocity.z())) *
                            (gamma - 1.0);
 #endif  // PRESSURE_DE
     right_state.pressure = fmax(right_state.pressure, (Real)TINY_NUMBER);
@@ -158,9 +158,9 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
     // (see Stone et al., 2008, Eqn 65, or Toro 2009, 11.118)
     sqrtdl = sqrt(left_state.density);
     sqrtdr = sqrt(right_state.density);
-    vx     = (sqrtdl * left_state.velocity.x + sqrtdr * right_state.velocity.x) / (sqrtdl + sqrtdr);
-    vy     = (sqrtdl * left_state.velocity.y + sqrtdr * right_state.velocity.y) / (sqrtdl + sqrtdr);
-    vz     = (sqrtdl * left_state.velocity.z + sqrtdr * right_state.velocity.z) / (sqrtdl + sqrtdr);
+    vx     = (sqrtdl * left_state.velocity.x() + sqrtdr * right_state.velocity.x()) / (sqrtdl + sqrtdr);
+    vy     = (sqrtdl * left_state.velocity.y() + sqrtdr * right_state.velocity.y()) / (sqrtdl + sqrtdr);
+    vz     = (sqrtdl * left_state.velocity.z() + sqrtdr * right_state.velocity.z()) / (sqrtdl + sqrtdr);
     H      = (sqrtdl * Hl + sqrtdr * Hr) / (sqrtdl + sqrtdr);
 
     // calculate the sound speed squared (Stone B2)
@@ -176,31 +176,31 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
 
     // calculate the fluxes for the left and right input states,
     // based on the average values in either cell
-    f_d_l  = left_state.momentum.x;
-    f_mx_l = left_state.momentum.x * left_state.velocity.x + left_state.pressure;
-    f_my_l = left_state.momentum.x * left_state.velocity.y;
-    f_mz_l = left_state.momentum.x * left_state.velocity.z;
-    f_E_l  = (left_state.energy + left_state.pressure) * left_state.velocity.x;
+    f_d_l  = left_state.momentum.x();
+    f_mx_l = left_state.momentum.x() * left_state.velocity.x() + left_state.pressure;
+    f_my_l = left_state.momentum.x() * left_state.velocity.y();
+    f_mz_l = left_state.momentum.x() * left_state.velocity.z();
+    f_E_l  = (left_state.energy + left_state.pressure) * left_state.velocity.x();
 #ifdef DE
-    f_ge_l = left_state.momentum.x * left_state.gas_energy_specific;
+    f_ge_l = left_state.momentum.x() * left_state.gas_energy_specific;
 #endif
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
-      f_scalar_l[i] = left_state.momentum.x * left_state.scalar_specific[i];
+      f_scalar_l[i] = left_state.momentum.x() * left_state.scalar_specific[i];
     }
 #endif
 
-    f_d_r  = right_state.momentum.x;
-    f_mx_r = right_state.momentum.x * right_state.velocity.x + right_state.pressure;
-    f_my_r = right_state.momentum.x * right_state.velocity.y;
-    f_mz_r = right_state.momentum.x * right_state.velocity.z;
-    f_E_r  = (right_state.energy + right_state.pressure) * right_state.velocity.x;
+    f_d_r  = right_state.momentum.x();
+    f_mx_r = right_state.momentum.x() * right_state.velocity.x() + right_state.pressure;
+    f_my_r = right_state.momentum.x() * right_state.velocity.y();
+    f_mz_r = right_state.momentum.x() * right_state.velocity.z();
+    f_E_r  = (right_state.energy + right_state.pressure) * right_state.velocity.x();
 #ifdef DE
-    f_ge_r = right_state.momentum.x * right_state.gas_energy_specific;
+    f_ge_r = right_state.momentum.x() * right_state.gas_energy_specific;
 #endif
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
-      f_scalar_r[i] = right_state.momentum.x * right_state.scalar_specific[i];
+      f_scalar_r[i] = right_state.momentum.x() * right_state.scalar_specific[i];
     }
 #endif
 
@@ -241,9 +241,9 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
       // calculate the difference in conserved variables across the cell
       // interface Stone Eqn 68
       del_d  = right_state.density - left_state.density;
-      del_mx = right_state.momentum.x - left_state.momentum.x;
-      del_my = right_state.momentum.y - left_state.momentum.y;
-      del_mz = right_state.momentum.z - left_state.momentum.z;
+      del_mx = right_state.momentum.x() - left_state.momentum.x();
+      del_my = right_state.momentum.y() - left_state.momentum.y();
+      del_mz = right_state.momentum.z() - left_state.momentum.z();
       del_E  = right_state.energy - left_state.energy;
 
       // evaluate the flux function (Stone Eqn 66 & 67, Toro Eqn 11.29)
@@ -292,9 +292,9 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
       // if density or pressure is negative, compute the HLLE fluxes
       // test intermediate states
       test0 = left_state.density + a0;
-      test1 = left_state.momentum.x + a0 * (vx - a);
-      test2 = left_state.momentum.y + a0 * vy;
-      test3 = left_state.momentum.z + a0 * vz;
+      test1 = left_state.momentum.x() + a0 * (vx - a);
+      test2 = left_state.momentum.y() + a0 * vy;
+      test3 = left_state.momentum.z() + a0 * vz;
       test4 = left_state.energy + a0 * (H - vx * a);
 
       if (lambda_0 > lambda_m) {
@@ -331,34 +331,34 @@ __global__ void Calculate_Roe_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
         cfr = sqrt(gamma * right_state.pressure / right_state.density);  // sound speed in right state
 
         // take max/fmin of Roe eigenvalues and left and right sound speeds
-        bm = fmin(fmin(lambda_m, left_state.velocity.x - cfl), (Real)0.0);
-        bp = fmax(fmax(lambda_p, right_state.velocity.x + cfr), (Real)0.0);
+        bm = fmin(fmin(lambda_m, left_state.velocity.x() - cfl), (Real)0.0);
+        bp = fmax(fmax(lambda_p, right_state.velocity.x() + cfr), (Real)0.0);
 
         // compute left and right fluxes
-        f_d_l = left_state.momentum.x - bm * left_state.density;
-        f_d_r = right_state.momentum.x - bp * right_state.density;
+        f_d_l = left_state.momentum.x() - bm * left_state.density;
+        f_d_r = right_state.momentum.x() - bp * right_state.density;
 
-        f_mx_l = left_state.momentum.x * (left_state.velocity.x - bm) + left_state.pressure;
-        f_mx_r = right_state.momentum.x * (right_state.velocity.x - bp) + right_state.pressure;
+        f_mx_l = left_state.momentum.x() * (left_state.velocity.x() - bm) + left_state.pressure;
+        f_mx_r = right_state.momentum.x() * (right_state.velocity.x() - bp) + right_state.pressure;
 
-        f_my_l = left_state.momentum.y * (left_state.velocity.x - bm);
-        f_my_r = right_state.momentum.y * (right_state.velocity.x - bp);
+        f_my_l = left_state.momentum.y() * (left_state.velocity.x() - bm);
+        f_my_r = right_state.momentum.y() * (right_state.velocity.x() - bp);
 
-        f_mz_l = left_state.momentum.z * (left_state.velocity.x - bm);
-        f_mz_r = right_state.momentum.z * (right_state.velocity.x - bp);
+        f_mz_l = left_state.momentum.z() * (left_state.velocity.x() - bm);
+        f_mz_r = right_state.momentum.z() * (right_state.velocity.x() - bp);
 
-        f_E_l = left_state.energy * (left_state.velocity.x - bm) + left_state.pressure * left_state.velocity.x;
-        f_E_r = right_state.energy * (right_state.velocity.x - bp) + right_state.pressure * right_state.velocity.x;
+        f_E_l = left_state.energy * (left_state.velocity.x() - bm) + left_state.pressure * left_state.velocity.x();
+        f_E_r = right_state.energy * (right_state.velocity.x() - bp) + right_state.pressure * right_state.velocity.x();
 
 #ifdef DE
-        f_ge_l = dgel * (left_state.velocity.x - bm);
-        f_ge_r = dger * (right_state.velocity.x - bp);
+        f_ge_l = dgel * (left_state.velocity.x() - bm);
+        f_ge_r = dger * (right_state.velocity.x() - bp);
 #endif
 
 #ifdef SCALAR
         for (int i = 0; i < NSCALARS; i++) {
-          f_scalar_l[i] = dscalarl[i] * (left_state.velocity.x - bm);
-          f_scalar_r[i] = dscalarr[i] * (right_state.velocity.x - bp);
+          f_scalar_l[i] = dscalarl[i] * (left_state.velocity.x() - bm);
+          f_scalar_r[i] = dscalarr[i] * (right_state.velocity.x() - bp);
         }
 #endif
 

@@ -57,22 +57,22 @@ __global__ void Calculate_Exact_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds
   // if (xid > n_ghost-3 && xid < nx-n_ghost+1 && yid < ny && zid < nz)
   if (xid < nx && yid < ny && zid < nz) {
     // retrieve primitive variables
-    left_state.density    = dev_bounds_L[tid];
-    left_state.velocity.x = dev_bounds_L[o1 * n_cells + tid] / left_state.density;
-    left_state.velocity.y = dev_bounds_L[o2 * n_cells + tid] / left_state.density;
-    left_state.velocity.z = dev_bounds_L[o3 * n_cells + tid] / left_state.density;
+    left_state.density      = dev_bounds_L[tid];
+    left_state.velocity.x() = dev_bounds_L[o1 * n_cells + tid] / left_state.density;
+    left_state.velocity.y() = dev_bounds_L[o2 * n_cells + tid] / left_state.density;
+    left_state.velocity.z() = dev_bounds_L[o3 * n_cells + tid] / left_state.density;
 #ifdef DE  // PRESSURE_DE
     E     = dev_bounds_L[4 * n_cells + tid];
     E_kin = 0.5 * left_state.density *
-            (left_state.velocity.x * left_state.velocity.x + left_state.velocity.y * left_state.velocity.y +
-             left_state.velocity.z * left_state.velocity.z);
+            (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
+             left_state.velocity.z() * left_state.velocity.z());
     dge                 = dev_bounds_L[(n_fields - 1) * n_cells + tid];
     left_state.pressure = hydro_utilities::Get_Pressure_From_DE(E, E - E_kin, dge, gamma);
 #else
     left_state.pressure = (dev_bounds_L[4 * n_cells + tid] - 0.5 * left_state.density *
-                                                                 (left_state.velocity.x * left_state.velocity.x +
-                                                                  left_state.velocity.y * left_state.velocity.y +
-                                                                  left_state.velocity.z * left_state.velocity.z)) *
+                                                                 (left_state.velocity.x() * left_state.velocity.x() +
+                                                                  left_state.velocity.y() * left_state.velocity.y() +
+                                                                  left_state.velocity.z() * left_state.velocity.z())) *
                           (gamma - 1.0);
 #endif  // PRESSURE_DE
     left_state.pressure = fmax(left_state.pressure, (Real)TINY_NUMBER);
@@ -84,23 +84,24 @@ __global__ void Calculate_Exact_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds
 #ifdef DE
     left_state.gas_energy_specific = dge / left_state.density;
 #endif
-    right_state.density    = dev_bounds_R[tid];
-    right_state.velocity.x = dev_bounds_R[o1 * n_cells + tid] / right_state.density;
-    right_state.velocity.y = dev_bounds_R[o2 * n_cells + tid] / right_state.density;
-    right_state.velocity.z = dev_bounds_R[o3 * n_cells + tid] / right_state.density;
+    right_state.density      = dev_bounds_R[tid];
+    right_state.velocity.x() = dev_bounds_R[o1 * n_cells + tid] / right_state.density;
+    right_state.velocity.y() = dev_bounds_R[o2 * n_cells + tid] / right_state.density;
+    right_state.velocity.z() = dev_bounds_R[o3 * n_cells + tid] / right_state.density;
 #ifdef DE  // PRESSURE_DE
     E     = dev_bounds_R[4 * n_cells + tid];
     E_kin = 0.5 * right_state.density *
-            (right_state.velocity.x * right_state.velocity.x + right_state.velocity.y * right_state.velocity.y +
-             right_state.velocity.z * right_state.velocity.z);
+            (right_state.velocity.x() * right_state.velocity.x() + right_state.velocity.y() * right_state.velocity.y() +
+             right_state.velocity.z() * right_state.velocity.z());
     dge                  = dev_bounds_R[(n_fields - 1) * n_cells + tid];
     right_state.pressure = hydro_utilities::Get_Pressure_From_DE(E, E - E_kin, dge, gamma);
 #else
-    right_state.pressure = (dev_bounds_R[4 * n_cells + tid] - 0.5 * right_state.density *
-                                                                  (right_state.velocity.x * right_state.velocity.x +
-                                                                   right_state.velocity.y * right_state.velocity.y +
-                                                                   right_state.velocity.z * right_state.velocity.z)) *
-                           (gamma - 1.0);
+    right_state.pressure =
+        (dev_bounds_R[4 * n_cells + tid] - 0.5 * right_state.density *
+                                               (right_state.velocity.x() * right_state.velocity.x() +
+                                                right_state.velocity.y() * right_state.velocity.y() +
+                                                right_state.velocity.z() * right_state.velocity.z())) *
+        (gamma - 1.0);
 #endif  // PRESSURE_DE
     right_state.pressure = fmax(right_state.pressure, (Real)TINY_NUMBER);
 #ifdef SCALAR
@@ -117,27 +118,27 @@ __global__ void Calculate_Exact_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds
     cr = sqrt(gamma * right_state.pressure / right_state.density);
 
     // test for the pressure positivity condition
-    if ((2.0 / (gamma - 1.0)) * (cl + cr) <= (right_state.velocity.x - left_state.velocity.x)) {
+    if ((2.0 / (gamma - 1.0)) * (cl + cr) <= (right_state.velocity.x() - left_state.velocity.x())) {
       // the initial data is such that vacuum is generated
       printf("Vacuum is generated by the initial data.\n");
-      printf("%f %f %f %f %f %f\n", left_state.density, left_state.velocity.x, left_state.pressure, right_state.density,
-             right_state.velocity.x, right_state.pressure);
+      printf("%f %f %f %f %f %f\n", left_state.density, left_state.velocity.x(), left_state.pressure,
+             right_state.density, right_state.velocity.x(), right_state.pressure);
     }
 
     // Find the exact solution for pressure and velocity in the star region
-    starpv_CUDA(&pm, &vm, left_state.density, left_state.velocity.x, left_state.pressure, cl, right_state.density,
-                right_state.velocity.x, right_state.pressure, cr, gamma);
+    starpv_CUDA(&pm, &vm, left_state.density, left_state.velocity.x(), left_state.pressure, cl, right_state.density,
+                right_state.velocity.x(), right_state.pressure, cr, gamma);
 
     // sample_CUDA the solution at the cell interface
-    sample_CUDA(pm, vm, &ds, &vs, &ps, left_state.density, left_state.velocity.x, left_state.pressure, cl,
-                right_state.density, right_state.velocity.x, right_state.pressure, cr, gamma);
+    sample_CUDA(pm, vm, &ds, &vs, &ps, left_state.density, left_state.velocity.x(), left_state.pressure, cl,
+                right_state.density, right_state.velocity.x(), right_state.pressure, cr, gamma);
 
     // calculate the fluxes through the cell interface
     dev_flux[tid]                = ds * vs;
     dev_flux[o1 * n_cells + tid] = ds * vs * vs + ps;
     if (vs >= 0) {
-      dev_flux[o2 * n_cells + tid] = ds * vs * left_state.velocity.y;
-      dev_flux[o3 * n_cells + tid] = ds * vs * left_state.velocity.z;
+      dev_flux[o2 * n_cells + tid] = ds * vs * left_state.velocity.y();
+      dev_flux[o3 * n_cells + tid] = ds * vs * left_state.velocity.z();
 #ifdef SCALAR
       for (int i = 0; i < NSCALARS; i++) {
         dev_flux[(5 + i) * n_cells + tid] = ds * vs * left_state.scalar_specific[i];
@@ -147,11 +148,11 @@ __global__ void Calculate_Exact_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds
       dev_flux[(n_fields - 1) * n_cells + tid] = ds * vs * left_state.gas_energy_specific;
 #endif
       Es = (ps / (gamma - 1.0)) + 0.5 * ds *
-                                      (vs * vs + left_state.velocity.y * left_state.velocity.y +
-                                       left_state.velocity.z * left_state.velocity.z);
+                                      (vs * vs + left_state.velocity.y() * left_state.velocity.y() +
+                                       left_state.velocity.z() * left_state.velocity.z());
     } else {
-      dev_flux[o2 * n_cells + tid] = ds * vs * right_state.velocity.y;
-      dev_flux[o3 * n_cells + tid] = ds * vs * right_state.velocity.z;
+      dev_flux[o2 * n_cells + tid] = ds * vs * right_state.velocity.y();
+      dev_flux[o3 * n_cells + tid] = ds * vs * right_state.velocity.z();
 #ifdef SCALAR
       for (int i = 0; i < NSCALARS; i++) {
         dev_flux[(5 + i) * n_cells + tid] = ds * vs * right_state.scalar_specific[i];
@@ -161,8 +162,8 @@ __global__ void Calculate_Exact_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds
       dev_flux[(n_fields - 1) * n_cells + tid] = ds * vs * right_state.gas_energy_specific;
 #endif
       Es = (ps / (gamma - 1.0)) + 0.5 * ds *
-                                      (vs * vs + right_state.velocity.y * right_state.velocity.y +
-                                       right_state.velocity.z * right_state.velocity.z);
+                                      (vs * vs + right_state.velocity.y() * right_state.velocity.y() +
+                                       right_state.velocity.z() * right_state.velocity.z());
     }
     dev_flux[4 * n_cells + tid] = (Es + ps) * vs;
   }

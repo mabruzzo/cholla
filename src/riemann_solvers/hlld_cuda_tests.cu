@@ -2412,12 +2412,12 @@ TEST(tMHDHlldInternalLoadState, CorrectInputExpectCorrectOutput)
 
     // Now check results
     testing_utilities::Check_Results(fiducialState.at(direction).density, testState.density, ", Density");
-    testing_utilities::Check_Results(fiducialState.at(direction).velocity.x, testState.velocity.x, ", velocityX");
-    testing_utilities::Check_Results(fiducialState.at(direction).velocity.y, testState.velocity.y, ", velocityY");
-    testing_utilities::Check_Results(fiducialState.at(direction).velocity.z, testState.velocity.z, ", velocityZ");
+    testing_utilities::Check_Results(fiducialState.at(direction).velocity.x(), testState.velocity.x(), ", velocityX");
+    testing_utilities::Check_Results(fiducialState.at(direction).velocity.y(), testState.velocity.y(), ", velocityY");
+    testing_utilities::Check_Results(fiducialState.at(direction).velocity.z(), testState.velocity.z(), ", velocityZ");
     testing_utilities::Check_Results(fiducialState.at(direction).energy, testState.energy, ", energy");
-    testing_utilities::Check_Results(fiducialState.at(direction).magnetic.y, testState.magnetic.y, ", magneticY");
-    testing_utilities::Check_Results(fiducialState.at(direction).magnetic.z, testState.magnetic.z, ", magneticZ");
+    testing_utilities::Check_Results(fiducialState.at(direction).magnetic.y(), testState.magnetic.y(), ", magneticY");
+    testing_utilities::Check_Results(fiducialState.at(direction).magnetic.z(), testState.magnetic.z(), ", magneticZ");
     testing_utilities::Check_Results(fiducialState.at(direction).pressure, testState.pressure, ", gasPressure");
     testing_utilities::Check_Results(fiducialState.at(direction).total_pressure, testState.total_pressure,
                                      ", totalPressure");

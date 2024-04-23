@@ -256,9 +256,9 @@ __device__ __host__ mhd::internal::Flux computeDoubleStarFluxes(mhd::internal::D
 inline __host__ __device__ Real Calc_Pressure_Primitive(reconstruction::InterfaceState const &state,
                                                         Real const &magneticX, Real const &gamma)
 {
-  return hydro_utilities::Calc_Pressure_Primitive(state.energy, state.density, state.velocity.x, state.velocity.y,
-                                                  state.velocity.z, gamma, magneticX, state.magnetic.y,
-                                                  state.magnetic.z);
+  return hydro_utilities::Calc_Pressure_Primitive(state.energy, state.density, state.velocity.x(), state.velocity.y(),
+                                                  state.velocity.z(), gamma, magneticX, state.magnetic.y(),
+                                                  state.magnetic.z());
 }
 }  // namespace internal
 }  // end namespace mhd

@@ -156,10 +156,10 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Load_Data(
   hydro_utilities::Primitive loaded_data;
 
   // Load hydro variables except pressure
-  loaded_data.density    = dev_conserved[grid_enum::density * n_cells + id];
-  loaded_data.velocity.x = dev_conserved[o1 * n_cells + id] / loaded_data.density;
-  loaded_data.velocity.y = dev_conserved[o2 * n_cells + id] / loaded_data.density;
-  loaded_data.velocity.z = dev_conserved[o3 * n_cells + id] / loaded_data.density;
+  loaded_data.density      = dev_conserved[grid_enum::density * n_cells + id];
+  loaded_data.velocity.x() = dev_conserved[o1 * n_cells + id] / loaded_data.density;
+  loaded_data.velocity.y() = dev_conserved[o2 * n_cells + id] / loaded_data.density;
+  loaded_data.velocity.z() = dev_conserved[o3 * n_cells + id] / loaded_data.density;
 
   // Load MHD variables. Note that I only need the centered values for the transverse fields except for the initial
   // computation of the primitive variables
@@ -167,19 +167,19 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Load_Data(
   auto magnetic_centered = mhd::utils::cellCenteredMagneticFields(dev_conserved, id, xid, yid, zid, n_cells, nx, ny);
   switch (o1) {
     case grid_enum::momentum_x:
-      loaded_data.magnetic.x = magnetic_centered.x;
-      loaded_data.magnetic.y = magnetic_centered.y;
-      loaded_data.magnetic.z = magnetic_centered.z;
+      loaded_data.magnetic.x() = magnetic_centered.x();
+      loaded_data.magnetic.y() = magnetic_centered.y();
+      loaded_data.magnetic.z() = magnetic_centered.z();
       break;
     case grid_enum::momentum_y:
-      loaded_data.magnetic.x = magnetic_centered.y;
-      loaded_data.magnetic.y = magnetic_centered.z;
-      loaded_data.magnetic.z = magnetic_centered.x;
+      loaded_data.magnetic.x() = magnetic_centered.y();
+      loaded_data.magnetic.y() = magnetic_centered.z();
+      loaded_data.magnetic.z() = magnetic_centered.x();
       break;
     case grid_enum::momentum_z:
-      loaded_data.magnetic.x = magnetic_centered.z;
-      loaded_data.magnetic.y = magnetic_centered.x;
-      loaded_data.magnetic.z = magnetic_centered.y;
+      loaded_data.magnetic.x() = magnetic_centered.z();
+      loaded_data.magnetic.y() = magnetic_centered.x();
+      loaded_data.magnetic.z() = magnetic_centered.y();
       break;
   }
 #endif  // MHD
@@ -190,11 +190,11 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Load_Data(
   Real const gas_energy = dev_conserved[grid_enum::GasEnergy * n_cells + id];
 
   Real energy_non_thermal = hydro_utilities::Calc_Kinetic_Energy_From_Velocity(
-      loaded_data.density, loaded_data.velocity.x, loaded_data.velocity.y, loaded_data.velocity.z);
+      loaded_data.density, loaded_data.velocity.x(), loaded_data.velocity.y(), loaded_data.velocity.z());
 
   #ifdef MHD
   energy_non_thermal +=
-      mhd::utils::computeMagneticEnergy(magnetic_centered.x, magnetic_centered.y, magnetic_centered.z);
+      mhd::utils::computeMagneticEnergy(magnetic_centered.x(), magnetic_centered.y(), magnetic_centered.z());
   #endif  // MHD
 
   loaded_data.pressure = hydro_utilities::Get_Pressure_From_DE(energy, energy - energy_non_thermal, gas_energy, gamma);
@@ -202,13 +202,13 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Load_Data(
 #else  // not DE
   #ifdef MHD
   loaded_data.pressure = hydro_utilities::Calc_Pressure_Primitive(
-      dev_conserved[grid_enum::Energy * n_cells + id], loaded_data.density, loaded_data.velocity.x,
-      loaded_data.velocity.y, loaded_data.velocity.z, gamma, loaded_data.magnetic.x, loaded_data.magnetic.y,
-      loaded_data.magnetic.z);
+      dev_conserved[grid_enum::Energy * n_cells + id], loaded_data.density, loaded_data.velocity.x(),
+      loaded_data.velocity.y(), loaded_data.velocity.z(), gamma, loaded_data.magnetic.x(), loaded_data.magnetic.y(),
+      loaded_data.magnetic.z());
   #else   // not MHD
   loaded_data.pressure = hydro_utilities::Calc_Pressure_Primitive(
-      dev_conserved[grid_enum::Energy * n_cells + id], loaded_data.density, loaded_data.velocity.x,
-      loaded_data.velocity.y, loaded_data.velocity.z, gamma);
+      dev_conserved[grid_enum::Energy * n_cells + id], loaded_data.density, loaded_data.velocity.x(),
+      loaded_data.velocity.y(), loaded_data.velocity.z(), gamma);
   #endif  // MHD
 #endif    // DE
 
@@ -237,15 +237,15 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Compute_Slope(hydro_ut
 {
   hydro_utilities::Primitive slopes;
 
-  slopes.density    = coef * (right.density - left.density);
-  slopes.velocity.x = coef * (right.velocity.x - left.velocity.x);
-  slopes.velocity.y = coef * (right.velocity.y - left.velocity.y);
-  slopes.velocity.z = coef * (right.velocity.z - left.velocity.z);
-  slopes.pressure   = coef * (right.pressure - left.pressure);
+  slopes.density      = coef * (right.density - left.density);
+  slopes.velocity.x() = coef * (right.velocity.x() - left.velocity.x());
+  slopes.velocity.y() = coef * (right.velocity.y() - left.velocity.y());
+  slopes.velocity.z() = coef * (right.velocity.z() - left.velocity.z());
+  slopes.pressure     = coef * (right.pressure - left.pressure);
 
 #ifdef MHD
-  slopes.magnetic.y = coef * (right.magnetic.y - left.magnetic.y);
-  slopes.magnetic.z = coef * (right.magnetic.z - left.magnetic.z);
+  slopes.magnetic.y() = coef * (right.magnetic.y() - left.magnetic.y());
+  slopes.magnetic.z() = coef * (right.magnetic.z() - left.magnetic.z());
 #endif  // MHD
 
 #ifdef DE
@@ -283,15 +283,15 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Compute_Van_Leer_Slope
     }
   };
 
-  vl_slopes.density    = Calc_Vl_Slope(left_slope.density, right_slope.density);
-  vl_slopes.velocity.x = Calc_Vl_Slope(left_slope.velocity.x, right_slope.velocity.x);
-  vl_slopes.velocity.y = Calc_Vl_Slope(left_slope.velocity.y, right_slope.velocity.y);
-  vl_slopes.velocity.z = Calc_Vl_Slope(left_slope.velocity.z, right_slope.velocity.z);
-  vl_slopes.pressure   = Calc_Vl_Slope(left_slope.pressure, right_slope.pressure);
+  vl_slopes.density      = Calc_Vl_Slope(left_slope.density, right_slope.density);
+  vl_slopes.velocity.x() = Calc_Vl_Slope(left_slope.velocity.x(), right_slope.velocity.x());
+  vl_slopes.velocity.y() = Calc_Vl_Slope(left_slope.velocity.y(), right_slope.velocity.y());
+  vl_slopes.velocity.z() = Calc_Vl_Slope(left_slope.velocity.z(), right_slope.velocity.z());
+  vl_slopes.pressure     = Calc_Vl_Slope(left_slope.pressure, right_slope.pressure);
 
 #ifdef MHD
-  vl_slopes.magnetic.y = Calc_Vl_Slope(left_slope.magnetic.y, right_slope.magnetic.y);
-  vl_slopes.magnetic.z = Calc_Vl_Slope(left_slope.magnetic.z, right_slope.magnetic.z);
+  vl_slopes.magnetic.y() = Calc_Vl_Slope(left_slope.magnetic.y(), right_slope.magnetic.y());
+  vl_slopes.magnetic.z() = Calc_Vl_Slope(left_slope.magnetic.z(), right_slope.magnetic.z());
 #endif  // MHD
 
 #ifdef DE
@@ -327,10 +327,12 @@ EigenVecs __device__ __inline__ Compute_Eigenvectors(hydro_utilities::Primitive 
   // This is taken from Stone et al. 2008, appendix A. Equation numbers will be quoted as relevant
 
   // Compute wave speeds and their squares
-  output.magnetosonic_speed_fast = mhd::utils::fastMagnetosonicSpeed(
-      primitive.density, primitive.pressure, primitive.magnetic.x, primitive.magnetic.y, primitive.magnetic.z, gamma);
-  output.magnetosonic_speed_slow = mhd::utils::slowMagnetosonicSpeed(
-      primitive.density, primitive.pressure, primitive.magnetic.x, primitive.magnetic.y, primitive.magnetic.z, gamma);
+  output.magnetosonic_speed_fast =
+      mhd::utils::fastMagnetosonicSpeed(primitive.density, primitive.pressure, primitive.magnetic.x(),
+                                        primitive.magnetic.y(), primitive.magnetic.z(), gamma);
+  output.magnetosonic_speed_slow =
+      mhd::utils::slowMagnetosonicSpeed(primitive.density, primitive.pressure, primitive.magnetic.x(),
+                                        primitive.magnetic.y(), primitive.magnetic.z(), gamma);
 
   output.magnetosonic_speed_fast_squared = output.magnetosonic_speed_fast * output.magnetosonic_speed_fast;
   output.magnetosonic_speed_slow_squared = output.magnetosonic_speed_slow * output.magnetosonic_speed_slow;
@@ -352,12 +354,12 @@ EigenVecs __device__ __inline__ Compute_Eigenvectors(hydro_utilities::Primitive 
 
   // Compute Betas (equation A17). Note that rhypot can return an inf if By and Bz are both zero, the isfinite check
   // handles that case
-  Real const beta_denom = rhypot(primitive.magnetic.y, primitive.magnetic.z);
-  output.beta_y         = (isfinite(beta_denom)) ? primitive.magnetic.y * beta_denom : 1.0;
-  output.beta_z         = (isfinite(beta_denom)) ? primitive.magnetic.z * beta_denom : 0.0;
+  Real const beta_denom = rhypot(primitive.magnetic.y(), primitive.magnetic.z());
+  output.beta_y         = (isfinite(beta_denom)) ? primitive.magnetic.y() * beta_denom : 1.0;
+  output.beta_z         = (isfinite(beta_denom)) ? primitive.magnetic.z() * beta_denom : 0.0;
 
   // Compute Q(s) (equation A14)
-  output.sign         = copysign(1.0, primitive.magnetic.x);
+  output.sign         = copysign(1.0, primitive.magnetic.x());
   output.n_fs         = 0.5 / sound_speed_squared;  // equation A19
   output.q_prime_fast = output.sign * output.n_fs * output.alpha_fast * output.magnetosonic_speed_fast;
   output.q_prime_slow = output.sign * output.n_fs * output.alpha_slow * output.magnetosonic_speed_slow;
@@ -400,46 +402,52 @@ Characteristic __device__ __inline__ Primitive_To_Characteristic(hydro_utilities
   Real const inverse_sqrt_density = rsqrt(primitive.density);
   output.a0 =
       eigen.n_fs * eigen.alpha_fast *
-          (primitive_slope.pressure / primitive.density - eigen.magnetosonic_speed_fast * primitive_slope.velocity.x) +
-      eigen.q_prime_slow * (eigen.beta_y * primitive_slope.velocity.y + eigen.beta_z * primitive_slope.velocity.z) +
-      eigen.a_prime_slow * (eigen.beta_y * primitive_slope.magnetic.y + eigen.beta_z * primitive_slope.magnetic.z);
+          (primitive_slope.pressure / primitive.density -
+           eigen.magnetosonic_speed_fast * primitive_slope.velocity.x()) +
+      eigen.q_prime_slow * (eigen.beta_y * primitive_slope.velocity.y() + eigen.beta_z * primitive_slope.velocity.z()) +
+      eigen.a_prime_slow * (eigen.beta_y * primitive_slope.magnetic.y() + eigen.beta_z * primitive_slope.magnetic.z());
 
   output.a1 =
-      0.5 *
-      (eigen.beta_y * (primitive_slope.magnetic.z * eigen.sign * inverse_sqrt_density + primitive_slope.velocity.z) -
-       eigen.beta_z * (primitive_slope.magnetic.y * eigen.sign * inverse_sqrt_density + primitive_slope.velocity.y));
+      0.5 * (eigen.beta_y *
+                 (primitive_slope.magnetic.z() * eigen.sign * inverse_sqrt_density + primitive_slope.velocity.z()) -
+             eigen.beta_z *
+                 (primitive_slope.magnetic.y() * eigen.sign * inverse_sqrt_density + primitive_slope.velocity.y()));
 
   output.a2 =
       eigen.n_fs * eigen.alpha_slow *
-          (primitive_slope.pressure / primitive.density - eigen.magnetosonic_speed_slow * primitive_slope.velocity.x) -
-      eigen.q_prime_fast * (eigen.beta_y * primitive_slope.velocity.y + eigen.beta_z * primitive_slope.velocity.z) -
-      eigen.a_prime_fast * (eigen.beta_y * primitive_slope.magnetic.y + eigen.beta_z * primitive_slope.magnetic.z);
+          (primitive_slope.pressure / primitive.density -
+           eigen.magnetosonic_speed_slow * primitive_slope.velocity.x()) -
+      eigen.q_prime_fast * (eigen.beta_y * primitive_slope.velocity.y() + eigen.beta_z * primitive_slope.velocity.z()) -
+      eigen.a_prime_fast * (eigen.beta_y * primitive_slope.magnetic.y() + eigen.beta_z * primitive_slope.magnetic.z());
 
   output.a3 = primitive_slope.density - primitive_slope.pressure / sound_speed_squared;
 
   output.a4 =
       eigen.n_fs * eigen.alpha_slow *
-          (primitive_slope.pressure / primitive.density + eigen.magnetosonic_speed_slow * primitive_slope.velocity.x) +
-      eigen.q_prime_fast * (eigen.beta_y * primitive_slope.velocity.y + eigen.beta_z * primitive_slope.velocity.z) -
-      eigen.a_prime_fast * (eigen.beta_y * primitive_slope.magnetic.y + eigen.beta_z * primitive_slope.magnetic.z);
+          (primitive_slope.pressure / primitive.density +
+           eigen.magnetosonic_speed_slow * primitive_slope.velocity.x()) +
+      eigen.q_prime_fast * (eigen.beta_y * primitive_slope.velocity.y() + eigen.beta_z * primitive_slope.velocity.z()) -
+      eigen.a_prime_fast * (eigen.beta_y * primitive_slope.magnetic.y() + eigen.beta_z * primitive_slope.magnetic.z());
   output.a5 =
-      0.5 *
-      (eigen.beta_y * (primitive_slope.magnetic.z * eigen.sign * inverse_sqrt_density - primitive_slope.velocity.z) -
-       eigen.beta_z * (primitive_slope.magnetic.y * eigen.sign * inverse_sqrt_density - primitive_slope.velocity.y));
+      0.5 * (eigen.beta_y *
+                 (primitive_slope.magnetic.z() * eigen.sign * inverse_sqrt_density - primitive_slope.velocity.z()) -
+             eigen.beta_z *
+                 (primitive_slope.magnetic.y() * eigen.sign * inverse_sqrt_density - primitive_slope.velocity.y()));
 
   output.a6 =
       eigen.n_fs * eigen.alpha_fast *
-          (primitive_slope.pressure / primitive.density + eigen.magnetosonic_speed_fast * primitive_slope.velocity.x) -
-      eigen.q_prime_slow * (eigen.beta_y * primitive_slope.velocity.y + eigen.beta_z * primitive_slope.velocity.z) +
-      eigen.a_prime_slow * (eigen.beta_y * primitive_slope.magnetic.y + eigen.beta_z * primitive_slope.magnetic.z);
+          (primitive_slope.pressure / primitive.density +
+           eigen.magnetosonic_speed_fast * primitive_slope.velocity.x()) -
+      eigen.q_prime_slow * (eigen.beta_y * primitive_slope.velocity.y() + eigen.beta_z * primitive_slope.velocity.z()) +
+      eigen.a_prime_slow * (eigen.beta_y * primitive_slope.magnetic.y() + eigen.beta_z * primitive_slope.magnetic.z());
 
 #else   // not MHD
-  output.a0 = -primitive.density * primitive_slope.velocity.x / (2.0 * sound_speed) +
+  output.a0 = -primitive.density * primitive_slope.velocity.x() / (2.0 * sound_speed) +
               primitive_slope.pressure / (2.0 * sound_speed_squared);
   output.a1 = primitive_slope.density - primitive_slope.pressure / (sound_speed_squared);
-  output.a2 = primitive_slope.velocity.y;
-  output.a3 = primitive_slope.velocity.z;
-  output.a4 = primitive.density * primitive_slope.velocity.x / (2.0 * sound_speed) +
+  output.a2 = primitive_slope.velocity.y();
+  output.a3 = primitive_slope.velocity.z();
+  output.a4 = primitive.density * primitive_slope.velocity.x() / (2.0 * sound_speed) +
               primitive_slope.pressure / (2.0 * sound_speed_squared);
 #endif  // MHD
 
@@ -470,33 +478,33 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Characteristic_To_Prim
   output.density = primitive.density * (eigen.alpha_fast * (characteristic_slope.a0 + characteristic_slope.a6) +
                                         eigen.alpha_slow * (characteristic_slope.a2 + characteristic_slope.a4)) +
                    characteristic_slope.a3;
-  output.velocity.x =
+  output.velocity.x() =
       eigen.magnetosonic_speed_fast * eigen.alpha_fast * (characteristic_slope.a6 - characteristic_slope.a0) +
       eigen.magnetosonic_speed_slow * eigen.alpha_slow * (characteristic_slope.a4 - characteristic_slope.a2);
-  output.velocity.y = eigen.beta_y * (eigen.q_slow * (characteristic_slope.a0 - characteristic_slope.a6) +
-                                      eigen.q_fast * (characteristic_slope.a4 - characteristic_slope.a2)) +
-                      eigen.beta_z * (characteristic_slope.a5 - characteristic_slope.a1);
-  output.velocity.z = eigen.beta_z * (eigen.q_slow * (characteristic_slope.a0 - characteristic_slope.a6) +
-                                      eigen.q_fast * (characteristic_slope.a4 - characteristic_slope.a2)) +
-                      eigen.beta_y * (characteristic_slope.a1 - characteristic_slope.a5);
+  output.velocity.y() = eigen.beta_y * (eigen.q_slow * (characteristic_slope.a0 - characteristic_slope.a6) +
+                                        eigen.q_fast * (characteristic_slope.a4 - characteristic_slope.a2)) +
+                        eigen.beta_z * (characteristic_slope.a5 - characteristic_slope.a1);
+  output.velocity.z() = eigen.beta_z * (eigen.q_slow * (characteristic_slope.a0 - characteristic_slope.a6) +
+                                        eigen.q_fast * (characteristic_slope.a4 - characteristic_slope.a2)) +
+                        eigen.beta_y * (characteristic_slope.a1 - characteristic_slope.a5);
   output.pressure = primitive.density * sound_speed_squared *
                     (eigen.alpha_fast * (characteristic_slope.a0 + characteristic_slope.a6) +
                      eigen.alpha_slow * (characteristic_slope.a2 + characteristic_slope.a4));
-  output.magnetic.y =
+  output.magnetic.y() =
       eigen.beta_y * (eigen.a_slow * (characteristic_slope.a0 + characteristic_slope.a6) -
                       eigen.a_fast * (characteristic_slope.a2 + characteristic_slope.a4)) -
       eigen.beta_z * eigen.sign * sqrt(primitive.density) * (characteristic_slope.a5 + characteristic_slope.a1);
-  output.magnetic.z =
+  output.magnetic.z() =
       eigen.beta_z * (eigen.a_slow * (characteristic_slope.a0 + characteristic_slope.a6) -
                       eigen.a_fast * (characteristic_slope.a2 + characteristic_slope.a4)) +
       eigen.beta_y * eigen.sign * sqrt(primitive.density) * (characteristic_slope.a5 + characteristic_slope.a1);
 
 #else   // not MHD
-  output.density    = characteristic_slope.a0 + characteristic_slope.a1 + characteristic_slope.a4;
-  output.velocity.x = sound_speed / primitive.density * (characteristic_slope.a4 - characteristic_slope.a0);
-  output.velocity.y = characteristic_slope.a2;
-  output.velocity.z = characteristic_slope.a3;
-  output.pressure   = sound_speed_squared * (characteristic_slope.a0 + characteristic_slope.a4);
+  output.density      = characteristic_slope.a0 + characteristic_slope.a1 + characteristic_slope.a4;
+  output.velocity.x() = sound_speed / primitive.density * (characteristic_slope.a4 - characteristic_slope.a0);
+  output.velocity.y() = characteristic_slope.a2;
+  output.velocity.z() = characteristic_slope.a3;
+  output.pressure     = sound_speed_squared * (characteristic_slope.a0 + characteristic_slope.a4);
 #endif  // MHD
 
   return output;
@@ -621,19 +629,19 @@ void __device__ __host__ __inline__ Monotonize_Parabolic_Interface(hydro_utiliti
 
   // Monotonize each interface state
   Monotonize(cell_i.density, cell_im1.density, cell_ip1.density, interface_L_iph.density, interface_R_imh.density);
-  Monotonize(cell_i.velocity.x, cell_im1.velocity.x, cell_ip1.velocity.x, interface_L_iph.velocity.x,
-             interface_R_imh.velocity.x);
-  Monotonize(cell_i.velocity.y, cell_im1.velocity.y, cell_ip1.velocity.y, interface_L_iph.velocity.y,
-             interface_R_imh.velocity.y);
-  Monotonize(cell_i.velocity.z, cell_im1.velocity.z, cell_ip1.velocity.z, interface_L_iph.velocity.z,
-             interface_R_imh.velocity.z);
+  Monotonize(cell_i.velocity.x(), cell_im1.velocity.x(), cell_ip1.velocity.x(), interface_L_iph.velocity.x(),
+             interface_R_imh.velocity.x());
+  Monotonize(cell_i.velocity.y(), cell_im1.velocity.y(), cell_ip1.velocity.y(), interface_L_iph.velocity.y(),
+             interface_R_imh.velocity.y());
+  Monotonize(cell_i.velocity.z(), cell_im1.velocity.z(), cell_ip1.velocity.z(), interface_L_iph.velocity.z(),
+             interface_R_imh.velocity.z());
   Monotonize(cell_i.pressure, cell_im1.pressure, cell_ip1.pressure, interface_L_iph.pressure, interface_R_imh.pressure);
 
 #ifdef MHD
-  Monotonize(cell_i.magnetic.y, cell_im1.magnetic.y, cell_ip1.magnetic.y, interface_L_iph.magnetic.y,
-             interface_R_imh.magnetic.y);
-  Monotonize(cell_i.magnetic.z, cell_im1.magnetic.z, cell_ip1.magnetic.z, interface_L_iph.magnetic.z,
-             interface_R_imh.magnetic.z);
+  Monotonize(cell_i.magnetic.y(), cell_im1.magnetic.y(), cell_ip1.magnetic.y(), interface_L_iph.magnetic.y(),
+             interface_R_imh.magnetic.y());
+  Monotonize(cell_i.magnetic.z(), cell_im1.magnetic.z(), cell_ip1.magnetic.z(), interface_L_iph.magnetic.z(),
+             interface_R_imh.magnetic.z());
 #endif  // MHD
 
 #ifdef DE
@@ -665,15 +673,15 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Calc_Interface_Linear(
 
   auto interface = [&sign](Real const &state, Real const &slope) -> Real { return state + sign * 0.5 * slope; };
 
-  output.density    = interface(primitive.density, slopes.density);
-  output.velocity.x = interface(primitive.velocity.x, slopes.velocity.x);
-  output.velocity.y = interface(primitive.velocity.y, slopes.velocity.y);
-  output.velocity.z = interface(primitive.velocity.z, slopes.velocity.z);
-  output.pressure   = interface(primitive.pressure, slopes.pressure);
+  output.density      = interface(primitive.density, slopes.density);
+  output.velocity.x() = interface(primitive.velocity.x(), slopes.velocity.x());
+  output.velocity.y() = interface(primitive.velocity.y(), slopes.velocity.y());
+  output.velocity.z() = interface(primitive.velocity.z(), slopes.velocity.z());
+  output.pressure     = interface(primitive.pressure, slopes.pressure);
 
 #ifdef MHD
-  output.magnetic.y = interface(primitive.magnetic.y, slopes.magnetic.y);
-  output.magnetic.z = interface(primitive.magnetic.z, slopes.magnetic.z);
+  output.magnetic.y() = interface(primitive.magnetic.y(), slopes.magnetic.y());
+  output.magnetic.z() = interface(primitive.magnetic.z(), slopes.magnetic.z());
 #endif  // MHD
 
 #ifdef DE
@@ -710,15 +718,20 @@ hydro_utilities::Primitive __device__ __host__ __inline__ Calc_Interface_Parabol
     return 0.5 * (state_i + state_im1) - (slope_i - slope_im1) / 6.0;
   };
 
-  output.density    = interface(cell_i.density, cell_im1.density, slopes_i.density, slopes_im1.density);
-  output.velocity.x = interface(cell_i.velocity.x, cell_im1.velocity.x, slopes_i.velocity.x, slopes_im1.velocity.x);
-  output.velocity.y = interface(cell_i.velocity.y, cell_im1.velocity.y, slopes_i.velocity.y, slopes_im1.velocity.y);
-  output.velocity.z = interface(cell_i.velocity.z, cell_im1.velocity.z, slopes_i.velocity.z, slopes_im1.velocity.z);
-  output.pressure   = interface(cell_i.pressure, cell_im1.pressure, slopes_i.pressure, slopes_im1.pressure);
+  output.density = interface(cell_i.density, cell_im1.density, slopes_i.density, slopes_im1.density);
+  output.velocity.x() =
+      interface(cell_i.velocity.x(), cell_im1.velocity.x(), slopes_i.velocity.x(), slopes_im1.velocity.x());
+  output.velocity.y() =
+      interface(cell_i.velocity.y(), cell_im1.velocity.y(), slopes_i.velocity.y(), slopes_im1.velocity.y());
+  output.velocity.z() =
+      interface(cell_i.velocity.z(), cell_im1.velocity.z(), slopes_i.velocity.z(), slopes_im1.velocity.z());
+  output.pressure = interface(cell_i.pressure, cell_im1.pressure, slopes_i.pressure, slopes_im1.pressure);
 
 #ifdef MHD
-  output.magnetic.y = interface(cell_i.magnetic.y, cell_im1.magnetic.y, slopes_i.magnetic.y, slopes_im1.magnetic.y);
-  output.magnetic.z = interface(cell_i.magnetic.z, cell_im1.magnetic.z, slopes_i.magnetic.z, slopes_im1.magnetic.z);
+  output.magnetic.y() =
+      interface(cell_i.magnetic.y(), cell_im1.magnetic.y(), slopes_i.magnetic.y(), slopes_im1.magnetic.y());
+  output.magnetic.z() =
+      interface(cell_i.magnetic.z(), cell_im1.magnetic.z(), slopes_i.magnetic.z(), slopes_im1.magnetic.z());
 #endif  // MHD
 
 #ifdef DE
@@ -889,40 +902,40 @@ void __device__ __host__ __inline__ Write_Data(hydro_utilities::Primitive const 
 {
   // Write out density and momentum
   dev_interface[grid_enum::density * n_cells + id] = interface_state.density;
-  dev_interface[o1 * n_cells + id]                 = interface_state.density * interface_state.velocity.x;
-  dev_interface[o2 * n_cells + id]                 = interface_state.density * interface_state.velocity.y;
-  dev_interface[o3 * n_cells + id]                 = interface_state.density * interface_state.velocity.z;
+  dev_interface[o1 * n_cells + id]                 = interface_state.density * interface_state.velocity.x();
+  dev_interface[o2 * n_cells + id]                 = interface_state.density * interface_state.velocity.y();
+  dev_interface[o3 * n_cells + id]                 = interface_state.density * interface_state.velocity.z();
 
 #ifdef MHD
   // Write the Y and Z interface states and load the X magnetic face needed to compute the energy
   Real magnetic_x;
   switch (o1) {
     case grid_enum::momentum_x:
-      dev_interface[grid_enum::Q_x_magnetic_y * n_cells + id] = interface_state.magnetic.y;
-      dev_interface[grid_enum::Q_x_magnetic_z * n_cells + id] = interface_state.magnetic.z;
+      dev_interface[grid_enum::Q_x_magnetic_y * n_cells + id] = interface_state.magnetic.y();
+      dev_interface[grid_enum::Q_x_magnetic_z * n_cells + id] = interface_state.magnetic.z();
       magnetic_x                                              = dev_conserved[grid_enum::magnetic_x * n_cells + id];
       break;
     case grid_enum::momentum_y:
-      dev_interface[grid_enum::Q_y_magnetic_z * n_cells + id] = interface_state.magnetic.y;
-      dev_interface[grid_enum::Q_y_magnetic_x * n_cells + id] = interface_state.magnetic.z;
+      dev_interface[grid_enum::Q_y_magnetic_z * n_cells + id] = interface_state.magnetic.y();
+      dev_interface[grid_enum::Q_y_magnetic_x * n_cells + id] = interface_state.magnetic.z();
       magnetic_x                                              = dev_conserved[grid_enum::magnetic_y * n_cells + id];
       break;
     case grid_enum::momentum_z:
-      dev_interface[grid_enum::Q_z_magnetic_x * n_cells + id] = interface_state.magnetic.y;
-      dev_interface[grid_enum::Q_z_magnetic_y * n_cells + id] = interface_state.magnetic.z;
+      dev_interface[grid_enum::Q_z_magnetic_x * n_cells + id] = interface_state.magnetic.y();
+      dev_interface[grid_enum::Q_z_magnetic_y * n_cells + id] = interface_state.magnetic.z();
       magnetic_x                                              = dev_conserved[grid_enum::magnetic_z * n_cells + id];
       break;
   }
 
   // Compute the MHD energy
   dev_interface[grid_enum::Energy * n_cells + id] = hydro_utilities::Calc_Energy_Primitive(
-      interface_state.pressure, interface_state.density, interface_state.velocity.x, interface_state.velocity.y,
-      interface_state.velocity.z, gamma, magnetic_x, interface_state.magnetic.y, interface_state.magnetic.z);
+      interface_state.pressure, interface_state.density, interface_state.velocity.x(), interface_state.velocity.y(),
+      interface_state.velocity.z(), gamma, magnetic_x, interface_state.magnetic.y(), interface_state.magnetic.z());
 #else   // not MHD
   // Compute the hydro energy
   dev_interface[grid_enum::Energy * n_cells + id] = hydro_utilities::Calc_Energy_Primitive(
-      interface_state.pressure, interface_state.density, interface_state.velocity.x, interface_state.velocity.y,
-      interface_state.velocity.z, gamma);
+      interface_state.pressure, interface_state.density, interface_state.velocity.x(), interface_state.velocity.y(),
+      interface_state.velocity.z(), gamma);
 #endif  // MHD
 
 #ifdef DE

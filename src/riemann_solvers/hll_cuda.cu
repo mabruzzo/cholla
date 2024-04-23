@@ -70,11 +70,11 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
   // if (xid > n_ghost-3 && xid < nx-n_ghost+1 && yid < ny && zid < nz)
   if (xid < nx && yid < ny && zid < nz) {
     // retrieve conserved variables
-    left_state.density    = dev_bounds_L[tid];
-    left_state.momentum.x = dev_bounds_L[o1 * n_cells + tid];
-    left_state.momentum.y = dev_bounds_L[o2 * n_cells + tid];
-    left_state.momentum.z = dev_bounds_L[o3 * n_cells + tid];
-    left_state.energy     = dev_bounds_L[4 * n_cells + tid];
+    left_state.density      = dev_bounds_L[tid];
+    left_state.momentum.x() = dev_bounds_L[o1 * n_cells + tid];
+    left_state.momentum.y() = dev_bounds_L[o2 * n_cells + tid];
+    left_state.momentum.z() = dev_bounds_L[o3 * n_cells + tid];
+    left_state.energy       = dev_bounds_L[4 * n_cells + tid];
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
       left_state.scalar_specific[i] = dev_bounds_L[(5 + i) * n_cells + tid];
@@ -84,11 +84,11 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
     left_state.gas_energy_specific = dev_bounds_L[(n_fields - 1) * n_cells + tid];
 #endif
 
-    right_state.density    = dev_bounds_R[tid];
-    right_state.momentum.x = dev_bounds_R[o1 * n_cells + tid];
-    right_state.momentum.y = dev_bounds_R[o2 * n_cells + tid];
-    right_state.momentum.z = dev_bounds_R[o3 * n_cells + tid];
-    right_state.energy     = dev_bounds_R[4 * n_cells + tid];
+    right_state.density      = dev_bounds_R[tid];
+    right_state.momentum.x() = dev_bounds_R[o1 * n_cells + tid];
+    right_state.momentum.y() = dev_bounds_R[o2 * n_cells + tid];
+    right_state.momentum.z() = dev_bounds_R[o3 * n_cells + tid];
+    right_state.energy       = dev_bounds_R[4 * n_cells + tid];
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
       right_state.scalar_specific[i] = dev_bounds_R[(5 + i) * n_cells + tid];
@@ -99,20 +99,20 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
 #endif
 
     // calculate primitive variables
-    left_state.velocity.x = left_state.momentum.x / left_state.density;
-    left_state.velocity.y = left_state.momentum.y / left_state.density;
-    left_state.velocity.z = left_state.momentum.z / left_state.density;
+    left_state.velocity.x() = left_state.momentum.x() / left_state.density;
+    left_state.velocity.y() = left_state.momentum.y() / left_state.density;
+    left_state.velocity.z() = left_state.momentum.z() / left_state.density;
 #ifdef DE  // PRESSURE_DE
     E_kin = 0.5 * left_state.density *
-            (left_state.velocity.x * left_state.velocity.x + left_state.velocity.y * left_state.velocity.y +
-             left_state.velocity.z * left_state.velocity.z);
+            (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
+             left_state.velocity.z() * left_state.velocity.z());
     left_state.pressure = hydro_utilities::Get_Pressure_From_DE(left_state.energy, left_state.energy - E_kin,
                                                                 left_state.gas_energy_specific, gamma);
 #else
     left_state.pressure = (left_state.energy - 0.5 * left_state.density *
-                                                   (left_state.velocity.x * left_state.velocity.x +
-                                                    left_state.velocity.y * left_state.velocity.y +
-                                                    left_state.velocity.z * left_state.velocity.z)) *
+                                                   (left_state.velocity.x() * left_state.velocity.x() +
+                                                    left_state.velocity.y() * left_state.velocity.y() +
+                                                    left_state.velocity.z() * left_state.velocity.z())) *
                           (gamma - 1.0);
 #endif  // DE
     left_state.pressure = fmax(left_state.pressure, (Real)TINY_NUMBER);
@@ -124,20 +124,20 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
     // #ifdef DE
     // gel = left_state.gas_energy_specific / left_state.density;
     // #endif
-    right_state.velocity.x = right_state.momentum.x / right_state.density;
-    right_state.velocity.y = right_state.momentum.y / right_state.density;
-    right_state.velocity.z = right_state.momentum.z / right_state.density;
+    right_state.velocity.x() = right_state.momentum.x() / right_state.density;
+    right_state.velocity.y() = right_state.momentum.y() / right_state.density;
+    right_state.velocity.z() = right_state.momentum.z() / right_state.density;
 #ifdef DE  // PRESSURE_DE
     E_kin = 0.5 * right_state.density *
-            (right_state.velocity.x * right_state.velocity.x + right_state.velocity.y * right_state.velocity.y +
-             right_state.velocity.z * right_state.velocity.z);
+            (right_state.velocity.x() * right_state.velocity.x() + right_state.velocity.y() * right_state.velocity.y() +
+             right_state.velocity.z() * right_state.velocity.z());
     right_state.pressure = hydro_utilities::Get_Pressure_From_DE(right_state.energy, right_state.energy - E_kin,
                                                                  right_state.gas_energy_specific, gamma);
 #else
     right_state.pressure = (right_state.energy - 0.5 * right_state.density *
-                                                     (right_state.velocity.x * right_state.velocity.x +
-                                                      right_state.velocity.y * right_state.velocity.y +
-                                                      right_state.velocity.z * right_state.velocity.z)) *
+                                                     (right_state.velocity.x() * right_state.velocity.x() +
+                                                      right_state.velocity.y() * right_state.velocity.y() +
+                                                      right_state.velocity.z() * right_state.velocity.z())) *
                            (gamma - 1.0);
 #endif  // DE
     right_state.pressure = fmax(right_state.pressure, (Real)TINY_NUMBER);
@@ -158,9 +158,9 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
     // (see Stone et al., 2008, Eqn 65, or Toro 2009, 11.118)
     // sqrtdl = sqrt(dl);
     // sqrtdr = sqrt(right_state.density);
-    // vx = (sqrtdl*left_state.velocity.x + sqrtdr*right_state.velocity.x) / (sqrtdl + sqrtdr);
-    // vy = (sqrtdl*left_state.velocity.y + sqrtdr*right_state.velocity.y) / (sqrtdl + sqrtdr);
-    // vz = (sqrtdl*left_state.velocity.z + sqrtdr*right_state.velocity.z) / (sqrtdl + sqrtdr);
+    // vx = (sqrtdl*left_state.velocity.x() + sqrtdr*right_state.velocity.x()) / (sqrtdl + sqrtdr);
+    // vy = (sqrtdl*left_state.velocity.y() + sqrtdr*right_state.velocity.y()) / (sqrtdl + sqrtdr);
+    // vz = (sqrtdl*left_state.velocity.z() + sqrtdr*right_state.velocity.z()) / (sqrtdl + sqrtdr);
     // H  = (sqrtdl*Hl  + sqrtdr*Hr)  / (sqrtdl + sqrtdr);
 
     // calculate the sound speed squared (Stone B2)
@@ -176,41 +176,41 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
     cfr = sqrt(gamma * right_state.pressure / right_state.density);  // sound speed in right state
 
     // for signal speeds, take max/min of Roe eigenvalues and left and right
-    // sound speeds Batten eqn. 48 Sl = fmin(lambda_m, left_state.velocity.x - cfl); Sr =
-    // fmax(lambda_p, right_state.velocity.x + cfr);
+    // sound speeds Batten eqn. 48 Sl = fmin(lambda_m, left_state.velocity.x() - cfl); Sr =
+    // fmax(lambda_p, right_state.velocity.x() + cfr);
 
     // if the H-correction is turned on, add cross-flux dissipation
     // Sl = sgn_CUDA(Sl)*fmax(fabs(Sl), etah);
     // Sr = sgn_CUDA(Sr)*fmax(fabs(Sr), etah);
-    Sl = fmin(right_state.velocity.x - cfr, left_state.velocity.x - cfl);
-    Sr = fmax(left_state.velocity.x + cfl, right_state.velocity.x + cfr);
+    Sl = fmin(right_state.velocity.x() - cfr, left_state.velocity.x() - cfl);
+    Sr = fmax(left_state.velocity.x() + cfl, right_state.velocity.x() + cfr);
 
     // left and right fluxes
-    f_d_l  = left_state.momentum.x;
-    f_mx_l = left_state.momentum.x * left_state.velocity.x + left_state.pressure;
-    f_my_l = left_state.momentum.y * left_state.velocity.x;
-    f_mz_l = left_state.momentum.z * left_state.velocity.x;
-    f_E_l  = (left_state.energy + left_state.pressure) * left_state.velocity.x;
+    f_d_l  = left_state.momentum.x();
+    f_mx_l = left_state.momentum.x() * left_state.velocity.x() + left_state.pressure;
+    f_my_l = left_state.momentum.y() * left_state.velocity.x();
+    f_mz_l = left_state.momentum.z() * left_state.velocity.x();
+    f_E_l  = (left_state.energy + left_state.pressure) * left_state.velocity.x();
 #ifdef DE
-    f_ge_l = left_state.gas_energy_specific * left_state.velocity.x;
+    f_ge_l = left_state.gas_energy_specific * left_state.velocity.x();
 #endif
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
-      f_sc_l[i] = left_state.scalar_specific[i] * left_state.velocity.x;
+      f_sc_l[i] = left_state.scalar_specific[i] * left_state.velocity.x();
     }
 #endif
 
-    f_d_r  = right_state.momentum.x;
-    f_mx_r = right_state.momentum.x * right_state.velocity.x + right_state.pressure;
-    f_my_r = right_state.momentum.y * right_state.velocity.x;
-    f_mz_r = right_state.momentum.z * right_state.velocity.x;
-    f_E_r  = (right_state.energy + right_state.pressure) * right_state.velocity.x;
+    f_d_r  = right_state.momentum.x();
+    f_mx_r = right_state.momentum.x() * right_state.velocity.x() + right_state.pressure;
+    f_my_r = right_state.momentum.y() * right_state.velocity.x();
+    f_mz_r = right_state.momentum.z() * right_state.velocity.x();
+    f_E_r  = (right_state.energy + right_state.pressure) * right_state.velocity.x();
 #ifdef DE
-    f_ge_r = right_state.gas_energy_specific * right_state.velocity.x;
+    f_ge_r = right_state.gas_energy_specific * right_state.velocity.x();
 #endif
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
-      f_sc_r[i] = right_state.scalar_specific[i] * right_state.velocity.x;
+      f_sc_r[i] = right_state.scalar_specific[i] * right_state.velocity.x();
     }
 #endif
 
@@ -248,11 +248,14 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real *dev_bounds_L, Real *dev_bounds_R
     }
     // otherwise compute subsonic flux
     else {
-      f_d  = ((Sr * f_d_l) - (Sl * f_d_r) + Sl * Sr * (right_state.density - left_state.density)) / (Sr - Sl);
-      f_mx = ((Sr * f_mx_l) - (Sl * f_mx_r) + Sl * Sr * (right_state.momentum.x - left_state.momentum.x)) / (Sr - Sl);
-      f_my = ((Sr * f_my_l) - (Sl * f_my_r) + Sl * Sr * (right_state.momentum.y - left_state.momentum.y)) / (Sr - Sl);
-      f_mz = ((Sr * f_mz_l) - (Sl * f_mz_r) + Sl * Sr * (right_state.momentum.z - left_state.momentum.z)) / (Sr - Sl);
-      f_E  = ((Sr * f_E_l) - (Sl * f_E_r) + Sl * Sr * (right_state.energy - left_state.energy)) / (Sr - Sl);
+      f_d = ((Sr * f_d_l) - (Sl * f_d_r) + Sl * Sr * (right_state.density - left_state.density)) / (Sr - Sl);
+      f_mx =
+          ((Sr * f_mx_l) - (Sl * f_mx_r) + Sl * Sr * (right_state.momentum.x() - left_state.momentum.x())) / (Sr - Sl);
+      f_my =
+          ((Sr * f_my_l) - (Sl * f_my_r) + Sl * Sr * (right_state.momentum.y() - left_state.momentum.y())) / (Sr - Sl);
+      f_mz =
+          ((Sr * f_mz_l) - (Sl * f_mz_r) + Sl * Sr * (right_state.momentum.z() - left_state.momentum.z())) / (Sr - Sl);
+      f_E = ((Sr * f_E_l) - (Sl * f_E_r) + Sl * Sr * (right_state.energy - left_state.energy)) / (Sr - Sl);
 #ifdef DE
       f_ge = ((Sr * f_ge_l) - (Sl * f_ge_r) +
               Sl * Sr * (right_state.gas_energy_specific - left_state.gas_energy_specific)) /
