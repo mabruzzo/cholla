@@ -244,11 +244,11 @@ inline __host__ __device__ Conserved Load_Cell_Conserved(Real const *dev_conserv
   Conserved loaded_data;
 
   // Hydro variables
-  loaded_data.density    = dev_conserved[cell_id + n_cells * grid_enum::density];
-  loaded_data.momentum.x = dev_conserved[cell_id + n_cells * grid_enum::momentum_x];
-  loaded_data.momentum.y = dev_conserved[cell_id + n_cells * grid_enum::momentum_y];
-  loaded_data.momentum.z = dev_conserved[cell_id + n_cells * grid_enum::momentum_z];
-  loaded_data.energy     = dev_conserved[cell_id + n_cells * grid_enum::Energy];
+  loaded_data.density      = dev_conserved[cell_id + n_cells * grid_enum::density];
+  loaded_data.momentum.x() = dev_conserved[cell_id + n_cells * grid_enum::momentum_x];
+  loaded_data.momentum.y() = dev_conserved[cell_id + n_cells * grid_enum::momentum_y];
+  loaded_data.momentum.z() = dev_conserved[cell_id + n_cells * grid_enum::momentum_z];
+  loaded_data.energy       = dev_conserved[cell_id + n_cells * grid_enum::Energy];
 
 #ifdef MHD
   // These are all cell centered values
@@ -296,15 +296,15 @@ __inline__ __host__ __device__ Primitive Conserved_2_Primitive(Conserved const &
   Primitive output;
 
   // First the easy ones
-  output.density    = conserved_in.density;
-  output.velocity.x = conserved_in.momentum.x / conserved_in.density;
-  output.velocity.y = conserved_in.momentum.y / conserved_in.density;
-  output.velocity.z = conserved_in.momentum.z / conserved_in.density;
+  output.density      = conserved_in.density;
+  output.velocity.x() = conserved_in.momentum.x() / conserved_in.density;
+  output.velocity.y() = conserved_in.momentum.y() / conserved_in.density;
+  output.velocity.z() = conserved_in.momentum.z() / conserved_in.density;
 
 #ifdef MHD
-  output.magnetic.x = conserved_in.magnetic.x;
-  output.magnetic.y = conserved_in.magnetic.y;
-  output.magnetic.z = conserved_in.magnetic.z;
+  output.magnetic.x() = conserved_in.magnetic.x();
+  output.magnetic.y() = conserved_in.magnetic.y();
+  output.magnetic.z() = conserved_in.magnetic.z();
 #endif  // MHD
 
 #ifdef DE
@@ -319,11 +319,11 @@ __inline__ __host__ __device__ Primitive Conserved_2_Primitive(Conserved const &
 
 // Now that the easy ones are done let's figure out the pressure
 #ifdef DE  // DE
-  Real E_non_thermal = hydro_utilities::Calc_Kinetic_Energy_From_Velocity(output.density, output.velocity.x,
-                                                                          output.velocity.y, output.velocity.z);
+  Real E_non_thermal = hydro_utilities::Calc_Kinetic_Energy_From_Velocity(output.density, output.velocity.x(),
+                                                                          output.velocity.y(), output.velocity.z());
 
   #ifdef MHD
-  E_non_thermal += mhd::utils::computeMagneticEnergy(output.magnetic.x, output.magnetic.y, output.magnetic.z);
+  E_non_thermal += mhd::utils::computeMagneticEnergy(output.magnetic.x(), output.magnetic.y(), output.magnetic.z());
   #endif  // MHD
 
   output.pressure = hydro_utilities::Get_Pressure_From_DE(conserved_in.energy, conserved_in.energy - E_non_thermal,
@@ -331,11 +331,11 @@ __inline__ __host__ __device__ Primitive Conserved_2_Primitive(Conserved const &
 #else  // not DE
   #ifdef MHD
   output.pressure = hydro_utilities::Calc_Pressure_Primitive(
-      conserved_in.energy, conserved_in.density, output.velocity.x, output.velocity.y, output.velocity.z, gamma,
-      output.magnetic.x, output.magnetic.y, output.magnetic.z);
+      conserved_in.energy, conserved_in.density, output.velocity.x(), output.velocity.y(), output.velocity.z(), gamma,
+      output.magnetic.x(), output.magnetic.y(), output.magnetic.z());
   #else   // not MHD
   output.pressure = hydro_utilities::Calc_Pressure_Primitive(
-      conserved_in.energy, conserved_in.density, output.velocity.x, output.velocity.y, output.velocity.z, gamma);
+      conserved_in.energy, conserved_in.density, output.velocity.x(), output.velocity.y(), output.velocity.z(), gamma);
   #endif  // MHD
 #endif    // DE
 
@@ -356,15 +356,15 @@ __inline__ __host__ __device__ Conserved Primitive_2_Conserved(Primitive const &
   Conserved output;
 
   // First the easy ones
-  output.density    = primitive_in.density;
-  output.momentum.x = primitive_in.velocity.x * primitive_in.density;
-  output.momentum.y = primitive_in.velocity.y * primitive_in.density;
-  output.momentum.z = primitive_in.velocity.z * primitive_in.density;
+  output.density      = primitive_in.density;
+  output.momentum.x() = primitive_in.velocity.x() * primitive_in.density;
+  output.momentum.y() = primitive_in.velocity.y() * primitive_in.density;
+  output.momentum.z() = primitive_in.velocity.z() * primitive_in.density;
 
 #ifdef MHD
-  output.magnetic.x = primitive_in.magnetic.x;
-  output.magnetic.y = primitive_in.magnetic.y;
-  output.magnetic.z = primitive_in.magnetic.z;
+  output.magnetic.x() = primitive_in.magnetic.x();
+  output.magnetic.y() = primitive_in.magnetic.y();
+  output.magnetic.z() = primitive_in.magnetic.z();
 #endif  // MHD
 
 #ifdef DE
@@ -379,13 +379,14 @@ __inline__ __host__ __device__ Conserved Primitive_2_Conserved(Primitive const &
 
 // Now that the easy ones are done let's figure out the energy
 #ifdef MHD
-  output.energy = hydro_utilities::Calc_Energy_Primitive(
-      primitive_in.pressure, primitive_in.density, primitive_in.velocity.x, primitive_in.velocity.y,
-      primitive_in.velocity.z, gamma, primitive_in.magnetic.x, primitive_in.magnetic.y, primitive_in.magnetic.z);
+  output.energy = hydro_utilities::Calc_Energy_Primitive(primitive_in.pressure, primitive_in.density,
+                                                         primitive_in.velocity.x(), primitive_in.velocity.y(),
+                                                         primitive_in.velocity.z(), gamma, primitive_in.magnetic.x(),
+                                                         primitive_in.magnetic.y(), primitive_in.magnetic.z());
 #else   // not MHD
   output.energy =
-      hydro_utilities::Calc_Energy_Primitive(primitive_in.pressure, primitive_in.density, primitive_in.velocity.x,
-                                             primitive_in.velocity.y, primitive_in.velocity.z, gamma);
+      hydro_utilities::Calc_Energy_Primitive(primitive_in.pressure, primitive_in.density, primitive_in.velocity.x(),
+                                             primitive_in.velocity.y(), primitive_in.velocity.z(), gamma);
 #endif  // MHD
 
   return output;

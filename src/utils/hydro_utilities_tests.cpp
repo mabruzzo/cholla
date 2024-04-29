@@ -310,13 +310,13 @@ TEST(tALLLoadCellPrimitive, CorrectInputExpectCorrectOutput)
     hydro_utilities::Primitive const fiducial_data{
         13, {3.0769230769230771, 5.1538461538461542, 7.2307692307692308}, 9662.3910256410272, {147.5, 173.5, 197.5}};
     testing_utilities::Check_Results(fiducial_data.density, test_data.density, "density");
-    testing_utilities::Check_Results(fiducial_data.velocity.x, test_data.velocity.x, "velocity.x");
-    testing_utilities::Check_Results(fiducial_data.velocity.y, test_data.velocity.y, "velocity.y");
-    testing_utilities::Check_Results(fiducial_data.velocity.z, test_data.velocity.z, "velocity.z");
+    testing_utilities::Check_Results(fiducial_data.velocity.x(), test_data.velocity.x(), "velocity.x()");
+    testing_utilities::Check_Results(fiducial_data.velocity.y(), test_data.velocity.y(), "velocity.y()");
+    testing_utilities::Check_Results(fiducial_data.velocity.z(), test_data.velocity.z(), "velocity.z()");
     testing_utilities::Check_Results(fiducial_data.pressure, test_data.pressure, "pressure");
-    testing_utilities::Check_Results(fiducial_data.magnetic.x, test_data.magnetic.x, "magnetic.x");
-    testing_utilities::Check_Results(fiducial_data.magnetic.y, test_data.magnetic.y, "magnetic.y");
-    testing_utilities::Check_Results(fiducial_data.magnetic.z, test_data.magnetic.z, "magnetic.z");
+    testing_utilities::Check_Results(fiducial_data.magnetic.x(), test_data.magnetic.x(), "magnetic.x()");
+    testing_utilities::Check_Results(fiducial_data.magnetic.y(), test_data.magnetic.y(), "magnetic.y()");
+    testing_utilities::Check_Results(fiducial_data.magnetic.z(), test_data.magnetic.z(), "magnetic.z()");
 #else  // MHD
     hydro_utilities::Primitive fiducial_data{
         13, {3.0769230769230771, 5.1538461538461542, 7.2307692307692308}, 39950.641025641031};
@@ -324,9 +324,9 @@ TEST(tALLLoadCellPrimitive, CorrectInputExpectCorrectOutput)
     fiducial_data.pressure = 39950.641025641031;
   #endif  // DE
     testing_utilities::Check_Results(fiducial_data.density, test_data.density, "density");
-    testing_utilities::Check_Results(fiducial_data.velocity.x, test_data.velocity.x, "velocity.x");
-    testing_utilities::Check_Results(fiducial_data.velocity.y, test_data.velocity.y, "velocity.y");
-    testing_utilities::Check_Results(fiducial_data.velocity.z, test_data.velocity.z, "velocity.z");
+    testing_utilities::Check_Results(fiducial_data.velocity.x(), test_data.velocity.x(), "velocity.x");
+    testing_utilities::Check_Results(fiducial_data.velocity.y(), test_data.velocity.y(), "velocity.y");
+    testing_utilities::Check_Results(fiducial_data.velocity.z(), test_data.velocity.z(), "velocity.z");
     testing_utilities::Check_Results(fiducial_data.pressure, test_data.pressure, "pressure");
 #endif    // MHD
   }
@@ -378,18 +378,18 @@ TEST(tALLLoadCellConserved, CorrectInputExpectCorrectOutput)
     hydro_utilities::Conserved fiducial_data{13, {40, 67, 94}, 60500, {147.5, 173.5, 197.5}};
 #ifdef MHD
     testing_utilities::Check_Results(fiducial_data.density, test_data.density, "density");
-    testing_utilities::Check_Results(fiducial_data.momentum.x, test_data.momentum.x, "momentum.x");
-    testing_utilities::Check_Results(fiducial_data.momentum.y, test_data.momentum.y, "momentum.y");
-    testing_utilities::Check_Results(fiducial_data.momentum.z, test_data.momentum.z, "momentum.z");
+    testing_utilities::Check_Results(fiducial_data.momentum.x(), test_data.momentum.x(), "momentum.x");
+    testing_utilities::Check_Results(fiducial_data.momentum.y(), test_data.momentum.y(), "momentum.y");
+    testing_utilities::Check_Results(fiducial_data.momentum.z(), test_data.momentum.z(), "momentum.z");
     testing_utilities::Check_Results(fiducial_data.energy, test_data.energy, "energy");
-    testing_utilities::Check_Results(fiducial_data.magnetic.x, test_data.magnetic.x, "magnetic.x");
-    testing_utilities::Check_Results(fiducial_data.magnetic.y, test_data.magnetic.y, "magnetic.y");
-    testing_utilities::Check_Results(fiducial_data.magnetic.z, test_data.magnetic.z, "magnetic.z");
+    testing_utilities::Check_Results(fiducial_data.magnetic.x(), test_data.magnetic.x(), "magnetic.x");
+    testing_utilities::Check_Results(fiducial_data.magnetic.y(), test_data.magnetic.y(), "magnetic.y");
+    testing_utilities::Check_Results(fiducial_data.magnetic.z(), test_data.magnetic.z(), "magnetic.z");
 #else   // MHD
     testing_utilities::Check_Results(fiducial_data.density, test_data.density, "density");
-    testing_utilities::Check_Results(fiducial_data.momentum.x, test_data.momentum.x, "momentum.x");
-    testing_utilities::Check_Results(fiducial_data.momentum.y, test_data.momentum.y, "momentum.y");
-    testing_utilities::Check_Results(fiducial_data.momentum.z, test_data.momentum.z, "momentum.z");
+    testing_utilities::Check_Results(fiducial_data.momentum.x(), test_data.momentum.x(), "momentum.x");
+    testing_utilities::Check_Results(fiducial_data.momentum.y(), test_data.momentum.y(), "momentum.y");
+    testing_utilities::Check_Results(fiducial_data.momentum.z(), test_data.momentum.z(), "momentum.z");
     testing_utilities::Check_Results(fiducial_data.energy, test_data.energy, "energy");
 #endif  // MHD
   }
@@ -407,14 +407,14 @@ TEST(tALLConserved2Primitive, CorrectInputExpectCorrectOutput)
 #endif  // MHD
 
   testing_utilities::Check_Results(fiducial_data.density, test_data.density, "density");
-  testing_utilities::Check_Results(fiducial_data.velocity.x, test_data.velocity.x, "velocity.x");
-  testing_utilities::Check_Results(fiducial_data.velocity.y, test_data.velocity.y, "velocity.y");
-  testing_utilities::Check_Results(fiducial_data.velocity.z, test_data.velocity.z, "velocity.z");
+  testing_utilities::Check_Results(fiducial_data.velocity.x(), test_data.velocity.x(), "velocity.x");
+  testing_utilities::Check_Results(fiducial_data.velocity.y(), test_data.velocity.y(), "velocity.y");
+  testing_utilities::Check_Results(fiducial_data.velocity.z(), test_data.velocity.z(), "velocity.z");
   testing_utilities::Check_Results(fiducial_data.pressure, test_data.pressure, "pressure");
 #ifdef MHD
-  testing_utilities::Check_Results(fiducial_data.magnetic.x, test_data.magnetic.x, "magnetic.x");
-  testing_utilities::Check_Results(fiducial_data.magnetic.y, test_data.magnetic.y, "magnetic.y");
-  testing_utilities::Check_Results(fiducial_data.magnetic.z, test_data.magnetic.z, "magnetic.z");
+  testing_utilities::Check_Results(fiducial_data.magnetic.x(), test_data.magnetic.x(), "magnetic.x");
+  testing_utilities::Check_Results(fiducial_data.magnetic.y(), test_data.magnetic.y(), "magnetic.y");
+  testing_utilities::Check_Results(fiducial_data.magnetic.z(), test_data.magnetic.z(), "magnetic.z");
 #endif  // MHD
 #ifdef DE
   testing_utilities::Check_Results(fiducial_data.gas_energy_specific, test_data.gas_energy_specific,
@@ -434,14 +434,14 @@ TEST(tALLPrimitive2Conserved, CorrectInputExpectCorrectOutput)
 #endif  // MHD
 
   testing_utilities::Check_Results(fiducial_data.density, test_data.density, "density");
-  testing_utilities::Check_Results(fiducial_data.momentum.x, test_data.momentum.x, "momentum.x");
-  testing_utilities::Check_Results(fiducial_data.momentum.y, test_data.momentum.y, "momentum.y");
-  testing_utilities::Check_Results(fiducial_data.momentum.z, test_data.momentum.z, "momentum.z");
+  testing_utilities::Check_Results(fiducial_data.momentum.x(), test_data.momentum.x(), "momentum.x");
+  testing_utilities::Check_Results(fiducial_data.momentum.y(), test_data.momentum.y(), "momentum.y");
+  testing_utilities::Check_Results(fiducial_data.momentum.z(), test_data.momentum.z(), "momentum.z");
   testing_utilities::Check_Results(fiducial_data.energy, test_data.energy, "energy");
 #ifdef MHD
-  testing_utilities::Check_Results(fiducial_data.magnetic.x, test_data.magnetic.x, "magnetic.x");
-  testing_utilities::Check_Results(fiducial_data.magnetic.y, test_data.magnetic.y, "magnetic.y");
-  testing_utilities::Check_Results(fiducial_data.magnetic.z, test_data.magnetic.z, "magnetic.z");
+  testing_utilities::Check_Results(fiducial_data.magnetic.x(), test_data.magnetic.x(), "magnetic.x");
+  testing_utilities::Check_Results(fiducial_data.magnetic.y(), test_data.magnetic.y(), "magnetic.y");
+  testing_utilities::Check_Results(fiducial_data.magnetic.z(), test_data.magnetic.z(), "magnetic.z");
 #endif  // MHD
 #ifdef DE
   testing_utilities::Check_Results(fiducial_data.gas_energy, test_data.gas_energy, "gas_energy");

@@ -84,14 +84,14 @@ TEST(tALLSquareMagnitude, CorrectInputExpectCorrectOutput)
  */
 TEST(tALLCyclicPermuteOnce, CorrectInputExpectCorrectOutput)
 {
-  hydro_utilities::Vector test_vec{1, 2, 3};
+  hydro_utilities::VectorXYZ test_vec{1, 2, 3};
 
   math_utils::Cyclic_Permute_Once(test_vec);
 
   // Now check results
-  testing_utilities::Check_Results(2, test_vec.x, "Failure in x term");
-  testing_utilities::Check_Results(3, test_vec.y, "Failure in y term");
-  testing_utilities::Check_Results(1, test_vec.z, "Failure in z term");
+  testing_utilities::Check_Results(2, test_vec.x(), "Failure in x term");
+  testing_utilities::Check_Results(3, test_vec.y(), "Failure in y term");
+  testing_utilities::Check_Results(1, test_vec.z(), "Failure in z term");
 }
 // =========================================================================
 
@@ -102,13 +102,13 @@ TEST(tALLCyclicPermuteOnce, CorrectInputExpectCorrectOutput)
  */
 TEST(tALLCyclicPermuteTwice, CorrectInputExpectCorrectOutput)
 {
-  hydro_utilities::Vector test_vec{1, 2, 3};
+  hydro_utilities::VectorXYZ test_vec{1, 2, 3};
 
   math_utils::Cyclic_Permute_Twice(test_vec);
 
   // Now check results
-  testing_utilities::Check_Results(3, test_vec.x, "Failure in x term");
-  testing_utilities::Check_Results(1, test_vec.y, "Failure in y term");
-  testing_utilities::Check_Results(2, test_vec.z, "Failure in z term");
+  testing_utilities::Check_Results(3, test_vec.x(), "Failure in x term");
+  testing_utilities::Check_Results(1, test_vec.y(), "Failure in y term");
+  testing_utilities::Check_Results(2, test_vec.z(), "Failure in z term");
 }
 // =========================================================================
