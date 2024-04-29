@@ -103,11 +103,12 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
       left_state.velocity.y() = left_state.momentum.y() / left_state.density;
       left_state.velocity.z() = left_state.momentum.z() / left_state.density;
 #ifdef DE  // PRESSURE_DE
-      E_kin = 0.5 * left_state.density *
-              (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
-               left_state.velocity.z() * left_state.velocity.z());
+      Real E_kin =
+          0.5 * left_state.density *
+          (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
+           left_state.velocity.z() * left_state.velocity.z());
       left_state.pressure =
-          hydro_utilities::Get_Pressure_From_DE(left_state.energy, left_state.energy - E_kin, dgel, gamma);
+          hydro_utilities::Get_Pressure_From_DE(left_state.energy, left_state.energy - E_kin, gas_energy_left, gamma);
 #else
       left_state.pressure = (left_state.energy - 0.5 * left_state.density *
                                                      (left_state.velocity.x() * left_state.velocity.x() +
@@ -132,8 +133,8 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
           0.5 * right_state.density *
           (right_state.velocity.x() * right_state.velocity.x() + right_state.velocity.y() * right_state.velocity.y() +
            right_state.velocity.z() * right_state.velocity.z());
-      right_state.pressure =
-          hydro_utilities::Get_Pressure_From_DE(right_state.energy, right_state.energy - E_kin, dger, gamma);
+      right_state.pressure = hydro_utilities::Get_Pressure_From_DE(right_state.energy, right_state.energy - E_kin,
+                                                                   gas_energy_right, gamma);
 #else
       right_state.pressure = (right_state.energy - 0.5 * right_state.density *
                                                        (right_state.velocity.x() * right_state.velocity.x() +
@@ -195,7 +196,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
     f_mz_l = left_state.momentum.z() * left_state.velocity.x();
     f_E_l  = (left_state.energy + left_state.pressure) * left_state.velocity.x();
 #ifdef DE
-    f_ge_l = dgel * left_state.velocity.x();
+    Real f_ge_l = left_state.gas_energy_specific * left_state.density * left_state.velocity.x();
 #endif
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {
@@ -209,7 +210,7 @@ __global__ void Calculate_HLLC_Fluxes_CUDA(Real const *dev_conserved, Real const
     f_mz_r = right_state.momentum.z() * right_state.velocity.x();
     f_E_r  = (right_state.energy + right_state.pressure) * right_state.velocity.x();
 #ifdef DE
-    f_ge_r = dger * right_state.velocity.x();
+    Real f_ge_r = right_state.gas_energy_specific * right_state.density * right_state.velocity.x();
 #endif
 #ifdef SCALAR
     for (int i = 0; i < NSCALARS; i++) {

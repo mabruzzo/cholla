@@ -62,11 +62,12 @@ __global__ void Calculate_Exact_Fluxes_CUDA(Real const *dev_conserved, Real cons
       left_state.velocity.y() = dev_bounds_L[o2 * n_cells + tid] / left_state.density;
       left_state.velocity.z() = dev_bounds_L[o3 * n_cells + tid] / left_state.density;
 #ifdef DE  // PRESSURE_DE
-      E     = dev_bounds_L[4 * n_cells + tid];
-      E_kin = 0.5 * left_state.density *
-              (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
-               left_state.velocity.z() * left_state.velocity.z());
-      dge                 = dev_bounds_L[(n_fields - 1) * n_cells + tid];
+      Real E = dev_bounds_L[4 * n_cells + tid];
+      Real E_kin =
+          0.5 * left_state.density *
+          (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
+           left_state.velocity.z() * left_state.velocity.z());
+      Real dge            = dev_bounds_L[(n_fields - 1) * n_cells + tid];
       left_state.pressure = hydro_utilities::Get_Pressure_From_DE(E, E - E_kin, dge, gamma);
 #else
       left_state.pressure =
