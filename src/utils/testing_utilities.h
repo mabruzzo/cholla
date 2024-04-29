@@ -206,18 +206,18 @@ void inline Check_Interface(reconstruction::InterfaceState const &test_data,
   testing_utilities::Check_Results(test_data.density, fiducial_data.density, "density " + message);
   testing_utilities::Check_Results(test_data.energy, fiducial_data.energy, "energy " + message);
   testing_utilities::Check_Results(test_data.pressure, fiducial_data.pressure, "pressure " + message);
-  testing_utilities::Check_Results(test_data.velocity.x, fiducial_data.velocity.x, "velocity.x " + message);
-  testing_utilities::Check_Results(test_data.velocity.y, fiducial_data.velocity.y, "velocity.y " + message);
-  testing_utilities::Check_Results(test_data.velocity.z, fiducial_data.velocity.z, "velocity.z " + message);
-  testing_utilities::Check_Results(test_data.momentum.x, fiducial_data.momentum.x, "momentum.x " + message);
-  testing_utilities::Check_Results(test_data.momentum.y, fiducial_data.momentum.y, "momentum.y " + message);
-  testing_utilities::Check_Results(test_data.momentum.z, fiducial_data.momentum.z, "momentum.z " + message);
+  testing_utilities::Check_Results(test_data.velocity.x(), fiducial_data.velocity.x(), "velocity.x " + message);
+  testing_utilities::Check_Results(test_data.velocity.y(), fiducial_data.velocity.y(), "velocity.y " + message);
+  testing_utilities::Check_Results(test_data.velocity.z(), fiducial_data.velocity.z(), "velocity.z " + message);
+  testing_utilities::Check_Results(test_data.momentum.x(), fiducial_data.momentum.x(), "momentum.x " + message);
+  testing_utilities::Check_Results(test_data.momentum.y(), fiducial_data.momentum.y(), "momentum.y " + message);
+  testing_utilities::Check_Results(test_data.momentum.z(), fiducial_data.momentum.z(), "momentum.z " + message);
 
 #ifdef MHD
   testing_utilities::Check_Results(test_data.total_pressure, fiducial_data.total_pressure, "total_pressure" + message);
-  testing_utilities::Check_Results(test_data.magnetic.x, fiducial_data.magnetic.x, "magnetic.x " + message);
-  testing_utilities::Check_Results(test_data.magnetic.y, fiducial_data.magnetic.y, "magnetic.y " + message);
-  testing_utilities::Check_Results(test_data.magnetic.z, fiducial_data.magnetic.z, "magnetic.z " + message);
+  testing_utilities::Check_Results(test_data.magnetic.x(), fiducial_data.magnetic.x(), "magnetic.x " + message);
+  testing_utilities::Check_Results(test_data.magnetic.y(), fiducial_data.magnetic.y(), "magnetic.y " + message);
+  testing_utilities::Check_Results(test_data.magnetic.z(), fiducial_data.magnetic.z(), "magnetic.z " + message);
 #endif  // MHD
 }
 }  // namespace testing_utilities
