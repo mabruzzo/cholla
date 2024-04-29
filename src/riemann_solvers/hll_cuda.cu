@@ -78,11 +78,11 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real const *dev_conserved, Real const 
       left_state.gas_energy_specific = dev_bounds_L[(n_fields - 1) * n_cells + tid];
 #endif
 
-    right_state.density      = dev_bounds_R[tid];
-    right_state.momentum.x() = dev_bounds_R[o1 * n_cells + tid];
-    right_state.momentum.y() = dev_bounds_R[o2 * n_cells + tid];
-    right_state.momentum.z() = dev_bounds_R[o3 * n_cells + tid];
-    right_state.energy       = dev_bounds_R[4 * n_cells + tid];
+      right_state.density      = dev_bounds_R[tid];
+      right_state.momentum.x() = dev_bounds_R[o1 * n_cells + tid];
+      right_state.momentum.y() = dev_bounds_R[o2 * n_cells + tid];
+      right_state.momentum.z() = dev_bounds_R[o3 * n_cells + tid];
+      right_state.energy       = dev_bounds_R[4 * n_cells + tid];
 #ifdef SCALAR
       for (int i = 0; i < NSCALARS; i++) {
         right_state.scalar_specific[i] = dev_bounds_R[(5 + i) * n_cells + tid];
@@ -92,47 +92,48 @@ __global__ void Calculate_HLL_Fluxes_CUDA(Real const *dev_conserved, Real const 
       right_state.gas_energy_specific = dev_bounds_R[(n_fields - 1) * n_cells + tid];
 #endif
 
-    // calculate primitive variables
-    left_state.velocity.x() = left_state.momentum.x() / left_state.density;
-    left_state.velocity.y() = left_state.momentum.y() / left_state.density;
-    left_state.velocity.z() = left_state.momentum.z() / left_state.density;
+      // calculate primitive variables
+      left_state.velocity.x() = left_state.momentum.x() / left_state.density;
+      left_state.velocity.y() = left_state.momentum.y() / left_state.density;
+      left_state.velocity.z() = left_state.momentum.z() / left_state.density;
 #ifdef DE  // PRESSURE_DE
-    E_kin = 0.5 * left_state.density *
-            (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
-             left_state.velocity.z() * left_state.velocity.z());
-    left_state.pressure = hydro_utilities::Get_Pressure_From_DE(left_state.energy, left_state.energy - E_kin,
-                                                                left_state.gas_energy_specific, gamma);
+      E_kin = 0.5 * left_state.density *
+              (left_state.velocity.x() * left_state.velocity.x() + left_state.velocity.y() * left_state.velocity.y() +
+               left_state.velocity.z() * left_state.velocity.z());
+      left_state.pressure = hydro_utilities::Get_Pressure_From_DE(left_state.energy, left_state.energy - E_kin,
+                                                                  left_state.gas_energy_specific, gamma);
 #else
-    left_state.pressure = (left_state.energy - 0.5 * left_state.density *
-                                                   (left_state.velocity.x() * left_state.velocity.x() +
-                                                    left_state.velocity.y() * left_state.velocity.y() +
-                                                    left_state.velocity.z() * left_state.velocity.z())) *
-                          (gamma - 1.0);
+      left_state.pressure = (left_state.energy - 0.5 * left_state.density *
+                                                     (left_state.velocity.x() * left_state.velocity.x() +
+                                                      left_state.velocity.y() * left_state.velocity.y() +
+                                                      left_state.velocity.z() * left_state.velocity.z())) *
+                            (gamma - 1.0);
 #endif  // DE
-    left_state.pressure = fmax(left_state.pressure, (Real)TINY_NUMBER);
-    // #ifdef SCALAR
-    // for (int i=0; i<NSCALARS; i++) {
-    //   scl[i] = left_state.scalar_specific[i] / left_state.density;
-    // }
-    // #endif
-    // #ifdef DE
-    // gel = left_state.gas_energy_specific / left_state.density;
-    // #endif
-    right_state.velocity.x() = right_state.momentum.x() / right_state.density;
-    right_state.velocity.y() = right_state.momentum.y() / right_state.density;
-    right_state.velocity.z() = right_state.momentum.z() / right_state.density;
+      left_state.pressure = fmax(left_state.pressure, (Real)TINY_NUMBER);
+      // #ifdef SCALAR
+      // for (int i=0; i<NSCALARS; i++) {
+      //   scl[i] = left_state.scalar_specific[i] / left_state.density;
+      // }
+      // #endif
+      // #ifdef DE
+      // gel = left_state.gas_energy_specific / left_state.density;
+      // #endif
+      right_state.velocity.x() = right_state.momentum.x() / right_state.density;
+      right_state.velocity.y() = right_state.momentum.y() / right_state.density;
+      right_state.velocity.z() = right_state.momentum.z() / right_state.density;
 #ifdef DE  // PRESSURE_DE
-    E_kin = 0.5 * right_state.density *
-            (right_state.velocity.x() * right_state.velocity.x() + right_state.velocity.y() * right_state.velocity.y() +
-             right_state.velocity.z() * right_state.velocity.z());
-    right_state.pressure = hydro_utilities::Get_Pressure_From_DE(right_state.energy, right_state.energy - E_kin,
-                                                                 right_state.gas_energy_specific, gamma);
+      E_kin =
+          0.5 * right_state.density *
+          (right_state.velocity.x() * right_state.velocity.x() + right_state.velocity.y() * right_state.velocity.y() +
+           right_state.velocity.z() * right_state.velocity.z());
+      right_state.pressure = hydro_utilities::Get_Pressure_From_DE(right_state.energy, right_state.energy - E_kin,
+                                                                   right_state.gas_energy_specific, gamma);
 #else
-    right_state.pressure = (right_state.energy - 0.5 * right_state.density *
-                                                     (right_state.velocity.x() * right_state.velocity.x() +
-                                                      right_state.velocity.y() * right_state.velocity.y() +
-                                                      right_state.velocity.z() * right_state.velocity.z())) *
-                           (gamma - 1.0);
+      right_state.pressure = (right_state.energy - 0.5 * right_state.density *
+                                                       (right_state.velocity.x() * right_state.velocity.x() +
+                                                        right_state.velocity.y() * right_state.velocity.y() +
+                                                        right_state.velocity.z() * right_state.velocity.z())) *
+                             (gamma - 1.0);
 #endif  // DE
       right_state.pressure = fmax(right_state.pressure, (Real)TINY_NUMBER);
     }
