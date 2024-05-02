@@ -17,6 +17,8 @@
     #include "../grid/spatial_domain_props.h"
 
     #ifdef PARTICLES_GPU
+      #include "../utils/gpu.hpp" // cudaFree
+
       #define TPB_PARTICLES 1024
       // #define PRINT_GPU_MEMORY
       #define PRINT_MAX_MEMORY_USAGE
