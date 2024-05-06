@@ -237,7 +237,7 @@ std::vector<double> eval_stencil_overlap_(const Real* pos_indxU, Extent3D full_e
                      data.data(), pos_indU, full_extent.nx, full_extent.ny, stencil,
                      eval);
 
-  CHECK(cudaDeviceSynchronize());
+  GPU_Error_Check(cudaDeviceSynchronize());
   std::vector<double> out(full_extent.nx*full_extent.ny*full_extent.nz);
   data.cpyDeviceToHost(out);
   return out;
