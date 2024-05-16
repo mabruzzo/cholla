@@ -13,6 +13,29 @@
 
 namespace fb_prescription {
 
+/** Compute radius of shell-formation (in kpc) of a supernova
+ *
+ *  Some feedback prescriptions used this to switch between resolved & unresolved
+ *  feedback strategies.
+ *
+ *  \param ndens_cgs the average ambient number density
+ *
+ *  \note maybe it would be better if we didn't put this inside the public header?
+ */
+inline __device__ __host__ Real radius_shell_formation_kpc(Real ndens_cgs, int num_SN) {
+  // originally, we adopted the normalization from eq.(31) from Kim & Ostriker (2015)
+  // 30.2 pc (the fit to R_sh for a multiphase ambient medium) and the analytic
+  // scaling for a unifom medium eq.(8)
+  //
+  // subsequently, we made a plot for making comparisons with Figure 6 of
+  // Tigress paper, (Kim & Ostriker 2017) -- we did this for CIE cooling with
+  // ambient temperatures fixed at 1e4 K. This made it clear that we, like TIGRESS,
+  // should use the analytic choice for a singlephase ambient medium (it means we
+  // will more readily transition to unresolved and will decrease chance of over-cooling)
+  return 0.0226 * pow(ndens_cgs, -0.46) * pow(fabsf(num_SN), 0.29);
+}
+
+
 template<typename Stencil>
 struct ResolvedSNPrescription{
 
@@ -365,7 +388,7 @@ struct ResolvedAndUnresolvedSNe {
 
     s_info[feedinfoLUT::LEN * tid + feedinfoLUT::countSN] += num_SN;
 
-    Real shell_radius = feedback::R_SH * pow(n_0_cgs, -0.46) * pow(fabsf(num_SN), 0.29);
+    Real shell_radius = radius_shell_formation_kpc(n_0_cgs, num_SN);
 
     const bool is_resolved =  (3 * max(dx, max(dy, dz)) <= shell_radius);
 
