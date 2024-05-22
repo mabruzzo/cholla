@@ -142,28 +142,6 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
 
   pmap.warn_unused_parameters(optionalParams);
 
-#ifdef TEMPERATURE_FLOOR
-  if (parms->temperature_floor == 0) {
-    chprintf(
-        "WARNING: temperature floor is set to its default value (zero)! It can be set to a different value in the "
-        "input parameter file.\n");
-  }
-#endif
-#ifdef DENSITY_FLOOR
-  if (parms->density_floor == 0) {
-    chprintf(
-        "WARNING: density floor is set to its default value (zero)! It can be set to a different value in the input "
-        "parameter file.\n");
-  }
-#endif
-#ifdef SCALAR_FLOOR
-  if (parms->scalar_floor == 0) {
-    chprintf(
-        "WARNING: scalar floor is set to its default value (zero)! It can be set to a different value in the input "
-        "parameter file.\n");
-  }
-#endif
-
   // it may be useful to return pmap in the future so that we can use it to initialize individual modules
 }
 
@@ -407,18 +385,6 @@ bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameter
   } else if (strcmp(name, "UVB_rates_file") == 0) {
     strncpy(parms->UVB_rates_file, value, MAXLEN);
 #endif
-#ifdef TEMPERATURE_FLOOR
-  } else if (strcmp(name, "temperature_floor") == 0) {
-    parms->temperature_floor = atof(value);
-#endif
-#ifdef DENSITY_FLOOR
-  } else if (strcmp(name, "density_floor") == 0) {
-    parms->density_floor = atof(value);
-#endif
-#ifdef SCALAR_FLOOR
-  } else if (strcmp(name, "scalar_floor") == 0) {
-    parms->scalar_floor = atof(value);
-#endif
 #ifdef ANALYSIS
   } else if (strcmp(name, "analysis_scale_outputs_file") == 0) {
     strncpy(parms->analysis_scale_outputs_file, value, MAXLEN);
@@ -470,4 +436,24 @@ void New_Style_Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *
   // in the future, maybe we should provide a default value of 5/3 for gamma
   parms->gamma = Real(pmap.value<double>("gamma"));
   CHOLLA_ASSERT(parms->gamma > 1.0, "gamma parameter must be greater than one.");
+
+#ifdef TEMPERATURE_FLOOR
+  if (not pmap.has_param("temperature_floor")) {
+    chprintf("WARNING: parameter file doesn't include temperature_floor parameter. Defaulting to value of 0!\n");
+  }
+  parms->temperature_floor = pmap.value_or("temperature_floor", 0.0);
+#endif
+#ifdef DENSITY_FLOOR
+  if (not pmap.has_param("density_floor")) {
+    chprintf("WARNING: parameter file doesn't include density_floor parameter. Defaulting to value of 0!\n");
+  }
+  parms->density_floor = pmap.value_or("density_floor", 0.0);
+#endif
+#ifdef SCALAR_FLOOR
+  if (not pmap.has_param("scalar_floor")) {
+    chprintf("WARNING: parameter file doesn't include scalar_floor parameter. Defaulting to value of 0!\n");
+  }
+  parms->scalar_floor = pmap.value_or("scalar_floor", 0.0);
+#endif
+
 }
