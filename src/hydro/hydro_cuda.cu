@@ -546,9 +546,10 @@ __global__ void Calc_dt_3D(Real *dev_conserved, Real *dev_dti, Real gamma, int n
 #ifdef MHD
       // Compute the cell centered magnetic field using a straight average of
       // the faces
-      auto const [avgBx, avgBy, avgBz] =
+      auto const magnetic_centered =
           mhd::utils::cellCenteredMagneticFields(dev_conserved, id, xid, yid, zid, n_cells, nx, ny);
-      max_dti = fmax(max_dti, mhdInverseCrossingTime(E, d, d_inv, vx, vy, vz, avgBx, avgBy, avgBz, dx, dy, dz, gamma));
+      max_dti = fmax(max_dti, mhdInverseCrossingTime(E, d, d_inv, vx, vy, vz, magnetic_centered.x(),
+                                                     magnetic_centered.y(), magnetic_centered.z(), dx, dy, dz, gamma));
 #else   // not MHD
       max_dti = fmax(max_dti, hydroInverseCrossingTime(E, d, d_inv, vx, vy, vz, dx, dy, dz, gamma));
 #endif  // MHD
@@ -790,7 +791,7 @@ __global__ void Partial_Update_Advected_Internal_Energy_3D(Real *dev_conserved, 
   #ifdef MHD
     // Add the magnetic energy
     auto magnetic_centered = mhd::utils::cellCenteredMagneticFields(dev_conserved, id, xid, yid, zid, n_cells, nx, ny);
-    E_kin += mhd::utils::computeMagneticEnergy(magnetic_centered.x, magnetic_centered.y, magnetic_centered.z);
+    E_kin += mhd::utils::computeMagneticEnergy(magnetic_centered.x(), magnetic_centered.y(), magnetic_centered.z());
   #endif  // MHD
     P = hydro_utilities::Get_Pressure_From_DE(E, E - E_kin, GE, gamma);
     P = fmax(P, (Real)TINY_NUMBER);
