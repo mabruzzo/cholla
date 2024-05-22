@@ -455,5 +455,4 @@ void New_Style_Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *
   }
   parms->scalar_floor = pmap.value_or("scalar_floor", 0.0);
 #endif
-
 }
