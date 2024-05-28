@@ -46,7 +46,8 @@ class ODEIntegrator
     std::array<Real, N> cur_yvec = yvec_start;
 
     while (true) {
-      Real cur_step = std::min(xend - cur_x, nominal_step);
+      Real remaining_xgap = xend - cur_x;
+      Real cur_step       = std::min(remaining_xgap, nominal_step);
 
       // calculate the change in yvec over cur_step
       std::array<Real, N> d_yvec = calc_midpoint_step(cur_x, cur_yvec, cur_step);
@@ -63,7 +64,7 @@ class ODEIntegrator
         cur_yvec[i] += d_yvec[i];
       }
 
-      if (cur_step < nominal_step) {
+      if (remaining_xgap <= nominal_step) {
         break;
       }
     }
