@@ -47,12 +47,12 @@ struct RazorThinExponentialDisk {
   }
 };
 
-TEST(tALLPotentialAprroxExponentialDisk3MN, comparison)
+TEST(tALLPotentialApproxExponentialDisk3MN, comparison)
 {
   Real disk_mass                  = 0.15 * 6.5e10;  // in solar masses
   Real scale_length               = 3.5;            // in kpc
   Real scale_height               = 0.0;            // in kpc, A value of 0 means it's infinitely thin
-  AprroxExponentialDisk3MN approx = AprroxExponentialDisk3MN::create(disk_mass, scale_length, scale_height, true);
+  ApproxExponentialDisk3MN approx = ApproxExponentialDisk3MN::create(disk_mass, scale_length, scale_height, true);
 
   Real Sigma0 = disk_mass / (2 * M_PI * scale_length * scale_length);
   RazorThinExponentialDisk ref{Sigma0, scale_length};
