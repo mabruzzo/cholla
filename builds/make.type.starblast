@@ -1,5 +1,3 @@
-# This default file, make.type.disk-cie is identical to builds/make.type.disk
-
 MPI_GPU = -DMPI_GPU
 DFLAGS += -DPARTICLES
 DFLAGS += -DPARTICLES_GPU

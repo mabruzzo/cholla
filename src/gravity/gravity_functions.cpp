@@ -668,9 +668,6 @@ void Grid3D::Setup_Analytic_Galaxy_Potential(int g_start, int g_end, const DiskG
   int ny = Grav.ny_local + 2 * N_GHOST_POTENTIAL;
   int nz = Grav.nz_local + 2 * N_GHOST_POTENTIAL;
 
-  // the fraction of the disk that's not modelled (and so its analytic
-  // contribution must be added)
-
   int k, j, i, id;
   Real x_pos, y_pos, z_pos, R;
   for (k = g_start; k < g_end; k++) {
