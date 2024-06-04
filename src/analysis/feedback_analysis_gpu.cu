@@ -6,8 +6,6 @@
 #include "feedback_analysis.h"
 #ifdef PARTICLES_GPU
 
-  // in cgs, this is 0.01 cm^{-3}
-  #define MIN_DENSITY  (0.01 * MP * MU * LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT / MASS_UNIT)  // 148279.7
   #define TPB_ANALYSIS 1024
 
 __device__ void Warp_Reduce(volatile Real *buff, size_t tid)
@@ -54,7 +52,7 @@ void __global__ Reduce_Tubulence_kernel(int nx, int ny, int nz, int n_ghost, Rea
   Real x, y, z, r;
 
   if (xid > n_ghost - 1 && xid < nx - n_ghost && yid > n_ghost - 1 && yid < ny - n_ghost && zid > n_ghost - 1 &&
-      zid < nz - n_ghost && density[id] > MIN_DENSITY) {
+      zid < nz - n_ghost && density[id] > FB_ANALYSIS_CUTOFF_DENSITY) {
     x = xbound + (nx_local_start + xid - n_ghost + 0.5) * dx;
     y = ybound + (ny_local_start + yid - n_ghost + 0.5) * dy;
     z = zbound + (nz_local_start + zid - n_ghost + 0.5) * dz;

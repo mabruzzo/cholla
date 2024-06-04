@@ -148,7 +148,7 @@ struct MiyamotoNagaiPotential {
  *   https://ui.adsabs.harvard.edu/abs/2015MNRAS.448.2934S/abstract
  * to determine the properties of each component
  */
-struct AprroxExponentialDisk3MN {
+struct ApproxExponentialDisk3MN {
   MiyamotoNagaiPotential comps[3];
 
   /* Returns a properly configured disk with
@@ -165,7 +165,7 @@ struct AprroxExponentialDisk3MN {
    * \param[in] scale_height The desired scale_height of the disk (in code units)
    * \param[in] exponential_scaleheight Controls interpretation of scale-height
    */
-  static AprroxExponentialDisk3MN create(Real mass, Real scale_length, Real scale_height, bool exponential_scaleheight)
+  static ApproxExponentialDisk3MN create(Real mass, Real scale_length, Real scale_height, bool exponential_scaleheight)
   {
     if ((mass <= 0) or (scale_length <= 0)) CHOLLA_ERROR("invalid args");
 
@@ -201,7 +201,7 @@ struct AprroxExponentialDisk3MN {
       return ((((k[i][0] * x + k[i][1]) * x + k[i][2]) * x) + k[i][3]) * x + k[i][4];
     };
 
-    AprroxExponentialDisk3MN out;
+    ApproxExponentialDisk3MN out;
     for (int j = 0; j < 3; j++) {
       out.comps[j] = MiyamotoNagaiPotential{param(j) * mass, param(j + 3) * scale_length, b};
     }
@@ -241,7 +241,7 @@ struct AprroxExponentialDisk3MN {
 
 // It probably makes more sense for the following class to live in disk_ICs.h.
 // - we currently put the definition here (rather than the in disk_ICs.h) since it holds
-//   AprroxExponentialDisk3MN as an attribute
+//   ApproxExponentialDisk3MN as an attribute
 // - thus if we put this class in the disk_galaxy.h, we would also need to add an include
 //   this header file to disk_galaxy.h. That produces issues for any regular .cpp file
 //   that (directly or transitively includes) disk_galaxy.h
@@ -266,7 +266,7 @@ struct GasDiskProps {
    *   critical that this approximation is accurate at the domain boundaries (elsewhere, accuracy
    *   is entirely unimportant).
    */
-  AprroxExponentialDisk3MN selfgrav_approx_potential;
+  ApproxExponentialDisk3MN selfgrav_approx_potential;
 
   GasDiskProps(Real M_d, Real R_d, Real H_d, Real T_d, bool isothermal, Real selfgrav_scale_height_estimate)
       : M_d(M_d),
@@ -274,7 +274,7 @@ struct GasDiskProps {
         H_d(H_d),
         T_d(T_d),
         isothermal(isothermal),
-        selfgrav_approx_potential(AprroxExponentialDisk3MN::create(M_d, R_d, selfgrav_scale_height_estimate, true))
+        selfgrav_approx_potential(ApproxExponentialDisk3MN::create(M_d, R_d, selfgrav_scale_height_estimate, true))
   {
   }
 

@@ -1569,10 +1569,10 @@ void Grid3D::Write_Projection_HDF5(hid_t file_id)
           Real const E  = C.Energy[id];
 
     #ifdef MHD
-          auto const [magnetic_x, magnetic_y, magnetic_z] =
+          auto const magnetic_centered =
               mhd::utils::cellCenteredMagneticFields(C.host, id, xid, yid, zid, H.n_cells, H.nx, H.ny);
-          Real const T =
-              hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n, magnetic_x, magnetic_y, magnetic_z);
+          Real const T = hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n, magnetic_centered.x(),
+                                                              magnetic_centered.y(), magnetic_centered.z());
     #else   // MHD is not defined
           Real const T = hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n);
     #endif  // MHD
@@ -1620,10 +1620,10 @@ void Grid3D::Write_Projection_HDF5(hid_t file_id)
           Real const E  = C.Energy[id];
 
     #ifdef MHD
-          auto const [magnetic_x, magnetic_y, magnetic_z] =
+          auto const magnetic_centered =
               mhd::utils::cellCenteredMagneticFields(C.host, id, xid, yid, zid, H.n_cells, H.nx, H.ny);
-          Real const T =
-              hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n, magnetic_x, magnetic_y, magnetic_z);
+          Real const T = hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n, magnetic_centered.x(),
+                                                              magnetic_centered.y(), magnetic_centered.z());
     #else   // MHD is not defined
           Real const T = hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n);
     #endif  // MHD
@@ -1784,10 +1784,10 @@ void Grid3D::Write_Rotated_Projection_HDF5(hid_t file_id)
             Real const E  = C.Energy[id];
 
     #ifdef MHD
-            auto const [magnetic_x, magnetic_y, magnetic_z] =
+            auto const magnetic_centered =
                 mhd::utils::cellCenteredMagneticFields(C.host, id, xid, yid, zid, H.n_cells, H.nx, H.ny);
-            Real const T =
-                hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n, magnetic_x, magnetic_y, magnetic_z);
+            Real const T = hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n, magnetic_centered.x(),
+                                                                magnetic_centered.y(), magnetic_centered.z());
     #else   // MHD is not defined
             Real const T = hydro_utilities::Calc_Temp_Conserved(E, d, mx, my, mz, gama, n);
     #endif  // MHD

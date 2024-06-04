@@ -5,6 +5,10 @@
 #include "../global/global.h"
 #include "../grid/grid3D.h"
 
+// Specifies minimum density threshold for identifying cells used in
+// feedback-related analysis. In cgs, this is 0.01 cm^{-3}.
+#define FB_ANALYSIS_CUTOFF_DENSITY (0.01 * MU * MP / DENSITY_UNIT)
+
 class FeedbackAnalysis
 {
   Real *h_circ_vel_x, *h_circ_vel_y;

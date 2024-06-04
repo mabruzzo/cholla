@@ -244,7 +244,7 @@ void Grid3D::Compute_Potential_Isolated_Boundary(int direction, int side, int bc
           // -> we are implicitly assuming that the gas disk is the only source of dynamical density
           //    (i.e. the `rho_real` array is dominated by gas density)
           // -> we are currently ignoring contributions from particles
-          const AprroxExponentialDisk3MN approx_potential = galaxies::MW.getGasDisk().selfgrav_approx_potential;
+          const ApproxExponentialDisk3MN approx_potential = galaxies::MW.getGasDisk().selfgrav_approx_potential;
 
           r       = sqrt((pos_x * pos_x) + (pos_y * pos_y));
           pot_val = approx_potential.phi_disk_D3D(r, pos_z);

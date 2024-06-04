@@ -393,6 +393,8 @@ __device__ Real Photoelectric_Heating(Real n, Real T, Real n_av)
  */
 __device__ Real TI_cool(Real n, Real T)
 {
+  // WARNING: the fact that n_av is currently assigned a hardcoded value is a
+  //          caveat to this function's implementation
   Real lambda = 0.0;    // cooling rate, erg s^-1 cm^3
   Real H      = 0.0;    // heating rate, erg s^-1
   Real n_av   = 100.0;  // mean density in the sim volume
