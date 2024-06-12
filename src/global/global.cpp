@@ -421,7 +421,7 @@ void New_Style_Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *
   parms->nx = pmap.value<int>("nx");
   parms->ny = pmap.value<int>("ny");
   parms->nz = pmap.value<int>("nz");
-  CHOLLA_ASSERT((parms->nx <= 0) or (parms->ny <= 0) or (parms->nz <= 0), "domain dimensions must be positive");
+  CHOLLA_ASSERT((parms->nx >= 0) and (parms->ny >= 0) and (parms->nz >= 0), "domain dimensions must be positive");
 
 #ifdef STATIC_GRAV
   parms->custom_grav = pmap.value_or("custom_grav", 0);
