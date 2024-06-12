@@ -109,7 +109,7 @@ const std::set<std::string> optionalParams = {
 
 bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameters *parms);
 
-void New_Style_Init_Param_Struct_Members(ParameterMap &param, struct Parameters *parms);
+void Init_Param_Struct_Members(ParameterMap &param, struct Parameters *parms);
 
 /*! \fn void Parse_Params(char *param_file, struct Parameters * parms);
  *  \brief Reads the parameters in the given file into a structure. */
@@ -132,13 +132,13 @@ void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **a
 #endif
 
   // the plan is eventually replace Old_Style_Parse_Param entirely with
-  // New_Style_Init_Param_Struct_Members.
+  // Init_Param_Struct_Members.
   auto fn = [&](const char *name, const char *value) -> bool { return Old_Style_Parse_Param(name, value, parms); };
 
   pmap.pass_entries_to_legacy_parse_param(fn);
 
   // the plan is to eventually, use the new parsing functions from Parse_Param like the following
-  New_Style_Init_Param_Struct_Members(pmap, parms);
+  Init_Param_Struct_Members(pmap, parms);
 
   pmap.warn_unused_parameters(optionalParams);
 
@@ -415,7 +415,7 @@ bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameter
  *
  *  The goal is eventually get rid of the old-style function
  */
-void New_Style_Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
+void Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
 {
   // load the domain dimensions (abort with an error if one of these is missing)
   parms->nx = pmap.value<int>("nx");
