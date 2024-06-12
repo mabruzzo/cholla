@@ -183,6 +183,8 @@ bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameter
   } else if (strcmp(name, "out_float32_GasEnergy") == 0) {
     parms->out_float32_GasEnergy = atoi(value);
 #endif  // DE
+  } else if (strcmp(name, "output_always") == 0) {
+    parms->output_always = atoi(value);
 #ifdef MHD
   } else if (strcmp(name, "out_float32_magnetic_x") == 0) {
     parms->out_float32_magnetic_x = atoi(value);
@@ -319,9 +321,15 @@ bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameter
   } else if (strcmp(name, "prng_seed") == 0) {
     parms->prng_seed = atoi(value);
 #endif  // PARTICLES
-#ifdef SUPERNOVA
+#ifdef FEEDBACK
+  #ifndef NO_SN_FEEDBACK
   } else if (strcmp(name, "snr_filename") == 0) {
     strncpy(parms->snr_filename, value, MAXLEN);
+  #endif
+  #ifndef NO_WIND_FEEDBACK
+  } else if (strcmp(name, "sw_filename") == 0) {
+    strncpy(parms->sw_filename, value, MAXLEN);
+  #endif
 #endif
 #ifdef ROTATED_PROJECTION
   } else if (strcmp(name, "nxr") == 0) {
