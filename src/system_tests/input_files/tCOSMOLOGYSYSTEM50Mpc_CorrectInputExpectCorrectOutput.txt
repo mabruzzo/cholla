@@ -8,7 +8,7 @@ nx=64
 # number of grid cells in the y dimension
 ny=64
 # number of grid cells in the z dimension
-nz=64s
+nz=64
 # output time
 tout=1000
 # how often to output

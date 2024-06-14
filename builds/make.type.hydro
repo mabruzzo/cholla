@@ -2,14 +2,15 @@
 
 DFLAGS    += -DMPI_CHOLLA
 DFLAGS    += -DPRECISION=2
-DFLAGS    += -DPLMC
 DFLAGS    += -DHLLC
 
 # Integrator
 ifeq ($(findstring cosmology,$(TYPE)),cosmology)
 DFLAGS    += -DSIMPLE
+DFLAGS    += -DPPMP
 else
 DFLAGS    += -DVL
+DFLAGS    += -DPLMC
 endif
 
 # Apply a density and temperature floor
