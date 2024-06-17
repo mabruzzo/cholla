@@ -86,8 +86,8 @@ void __device__ __host__ __inline__ PLM_Characteristic_Evolution(hydro_utilities
 #endif  // DE
 #ifdef SCALAR
   Real sum_scalar[NSCALARS];
-  for (int i = 0; i < NSCALARS; i++) {
-    sum_scalar[i] = 0.0;
+  for (double &scalar_i : sum_scalar) {
+    scalar_i = 0.0;
   }
 #endif  // SCALAR
   if (lambda_m >= 0) {
@@ -143,8 +143,8 @@ void __device__ __host__ __inline__ PLM_Characteristic_Evolution(hydro_utilities
   sum_ge = 0;
 #endif  // DE
 #ifdef SCALAR
-  for (int i = 0; i < NSCALARS; i++) {
-    sum_scalar[i] = 0;
+  for (double &scalar_i : sum_scalar) {
+    scalar_i = 0.0;
   }
 #endif  // SCALAR
   if (lambda_m <= 0) {
