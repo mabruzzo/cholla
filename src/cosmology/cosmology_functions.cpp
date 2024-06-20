@@ -171,8 +171,9 @@ void Cosmology::Create_Expansion_History_File(struct Parameters *P)
   // convert now to string form
   char *dt = ctime(&now);
 
-  std::string message = std::to_string(Omega_M) + " " + std::to_string(Omega_K);
-  message += " " + std::to_string(Omega_R) + " " + std::to_string(Omega_L) + " " + std::to_string(w0) + " " + std::to_string(wa);
+  std::string message = std::to_string(H0) + " " + std::to_string(Omega_M);
+  message += " " + std::to_string(Omega_L) + " " + std::to_string(w0) + " " + std::to_string(wa);
+  message += " " + std::to_string(Omega_R) + " " + std::to_string(Omega_K);
 
   std::ofstream out_file;
   out_file.open(file_name.c_str(), std::ios::app);
