@@ -178,6 +178,7 @@ void Cosmology::Create_Expansion_History_File(struct Parameters *P)
   out_file.open(file_name.c_str(), std::ios::app);
   out_file << "\n";
   out_file << "Run date: " << dt;
+  out_file << message.c_str() << std::endl;
   out_file.close();
 }
 
