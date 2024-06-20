@@ -13,7 +13,7 @@ void Grid3D::Initialize_Cosmology(struct Parameters *P)
   chprintf("Initializing Cosmology... \n");
   Cosmo.Initialize(P, Grav, Particles);
 
-  //Create expansion history log file
+  // Create expansion history log file
   Create_Log_File(P, Cosmo);
 
   // Change to comoving Cosmological System
@@ -28,17 +28,17 @@ void Grid3D::Initialize_Cosmology(struct Parameters *P)
 
 Real Cosmology::Get_da_from_dt(Real dt)
 {
-  Real a2 = current_a * current_a;
+  Real a2     = current_a * current_a;
   Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
-  Real a_dot = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
+  Real a_dot  = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
   return a_dot * dt;
 }
 
 Real Cosmology::Get_dt_from_da(Real da)
 {
-  Real a2 = current_a * current_a;
+  Real a2     = current_a * current_a;
   Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
-  Real a_dot = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
+  Real a_dot  = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
   return da / a_dot;
 }
 
