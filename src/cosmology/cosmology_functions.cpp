@@ -1,7 +1,5 @@
 #ifdef COSMOLOGY
-  #include <iomanip>
-  #include <iostream>
-  #include <sstream>
+  #include <fstream>
 
   #include "../global/global.h"
   #include "../grid/grid3D.h"
