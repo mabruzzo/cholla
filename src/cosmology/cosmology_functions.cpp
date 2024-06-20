@@ -29,7 +29,7 @@ void Grid3D::Initialize_Cosmology(struct Parameters *P)
 Real Cosmology::Get_da_from_dt(Real dt)
 {
   Real a2 = current_a * current_a;
-  Real fac_de = pow(a,-3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
+  Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
   Real a_dot = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
   return a_dot * dt;
 }
@@ -37,7 +37,7 @@ Real Cosmology::Get_da_from_dt(Real dt)
 Real Cosmology::Get_dt_from_da(Real da)
 {
   Real a2 = current_a * current_a;
-  Real fac_de = pow(a,-3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
+  Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
   Real a_dot = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
   return da / a_dot;
 }
@@ -47,7 +47,7 @@ Real Cosmology::Get_Hubble_Parameter(Real a)
   Real a2     = a * a;
   Real a3     = a2 * a;
   Real a4     = a2 * a2;
-  Real fac_de = pow(a,-3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
+  Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
   Real factor = (Omega_R / a4 + Omega_M / a3 + Omega_K / a2 + Omega_L * fac_de);
   return H0 * sqrt(factor);
 }
@@ -180,7 +180,7 @@ void Write_Expansion_History_Entry(void)
     return;
   }
 
-  std::string message = std::string(Cosmo.t_secs/MYR) + " " + std::string(Cosmo.current_a);
+  std::string message = std::string(Cosmo.t_secs / MYR) + " " + std::string(Cosmo.current_a);
   std::string file_name(EXPANSION_HISTORY_FILE_NAME);
   std::ofstream out_file;
   out_file.open(file_name.c_str(), std::ios::app);
