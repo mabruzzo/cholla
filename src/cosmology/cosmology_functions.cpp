@@ -26,7 +26,7 @@ void Grid3D::Initialize_Cosmology(struct Parameters *P)
 Real Cosmology::Get_da_from_dt(Real dt)
 {
   Real a2     = current_a * current_a;
-  Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
+  Real fac_de = pow(current_a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - current_a));
   Real a_dot  = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
   return a_dot * dt;
 }
@@ -34,7 +34,7 @@ Real Cosmology::Get_da_from_dt(Real dt)
 Real Cosmology::Get_dt_from_da(Real da)
 {
   Real a2     = current_a * current_a;
-  Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
+  Real fac_de = pow(current_a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - current_a));
   Real a_dot  = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
   return da / a_dot;
 }
@@ -137,8 +137,18 @@ void Grid3D::Change_GAS_Frame_System(bool forward)
   }
 }
 
+/* local function that designates whether we are using a root-process. It gives
+ * gives a sensible result regardless of whether we are using MPI */
+static inline bool Is_Root_Proc()
+{
+#ifdef MPI_CHOLLA
+  return procID == root;
+#else
+  return true;
+#endif
+}
 
-void Create_Expansion_History_File(struct Parameters P)
+void Cosmology::Create_Expansion_History_File(struct Parameters P)
 {
   // writing the expansion history
   if (not Is_Root_Proc()) {
@@ -170,7 +180,7 @@ void Create_Expansion_History_File(struct Parameters P)
   out_file.close();
 }
 
-void Write_Expansion_History_Entry(void)
+void Cosmology::Write_Expansion_History_Entry(void)
 {
   if (not Is_Root_Proc()) {
     return;
