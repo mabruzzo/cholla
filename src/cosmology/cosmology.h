@@ -70,7 +70,7 @@ class Cosmology
   Real Get_da_from_dt(Real dt);
   Real Get_dt_from_da(Real da);
 
-  //write expansion history log file
+  // write expansion history log file
   void Create_Expansion_History_File(struct Parameters P);
   void Write_Expansion_History_Entry(Real t, Real a);
 };
