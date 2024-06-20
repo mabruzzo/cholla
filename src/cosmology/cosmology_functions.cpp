@@ -11,7 +11,7 @@ void Grid3D::Initialize_Cosmology(struct Parameters *P)
   Cosmo.Initialize(P, Grav, Particles);
 
   // Create expansion history log file
-  Create_Log_File(P, Cosmo);
+  Cosmo.Create_Expansion_History_File(P);
 
   // Change to comoving Cosmological System
   Change_Cosmological_Frame_System(true);
@@ -148,7 +148,7 @@ static inline bool Is_Root_Proc()
 #endif
 }
 
-void Cosmology::Create_Expansion_History_File(struct Parameters P)
+void Cosmology::Create_Expansion_History_File(struct Parameters *P)
 {
   // writing the expansion history
   if (not Is_Root_Proc()) {
@@ -186,7 +186,7 @@ void Cosmology::Write_Expansion_History_Entry(void)
     return;
   }
 
-  std::string message = std::to_string(Cosmo.t_secs / MYR) + " " + std::to_string(Cosmo.current_a);
+  std::string message = std::to_string(t_secs / MYR) + " " + std::to_string(current_a);
   std::string file_name(EXPANSION_HISTORY_FILE_NAME);
   std::ofstream out_file;
   out_file.open(file_name.c_str(), std::ios::app);
