@@ -171,7 +171,7 @@ void Cosmology::Create_Expansion_History_File(struct Parameters *P)
   // convert now to string form
   char *dt = ctime(&now);
 
-  std::string message = "# H0 OmegaM Omega_b OmegaL w0 wa Omega_R Omega_K\n" 
+  std::string message = "# H0 OmegaM Omega_b OmegaL w0 wa Omega_R Omega_K\n";
   message += "# " + std::to_string(H0 * 1e3) + " " + std::to_string(Omega_M);
   message += " " + std::to_string(Omega_b);
   message += " " + std::to_string(Omega_L) + " " + std::to_string(w0) + " " + std::to_string(wa);
