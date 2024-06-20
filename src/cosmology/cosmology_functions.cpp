@@ -5,9 +5,6 @@
   #include "../grid/grid_enum.h"
   #include "../io/io.h"
 
-
-
-
 void Grid3D::Initialize_Cosmology(struct Parameters *P)
 {
   chprintf("Initializing Cosmology... \n");
@@ -141,10 +138,9 @@ void Grid3D::Change_GAS_Frame_System(bool forward)
 }
 
 
-// writing the expansion history
-
 void Create_Expansion_History_File(struct Parameters P)
 {
+  // writing the expansion history
   if (not Is_Root_Proc()) {
     return;
   }
