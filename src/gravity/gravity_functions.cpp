@@ -20,7 +20,7 @@
   #include "../model/disk_galaxy.h"
 // #endif
 
-// Set delta_t when usi#ng gravity
+// Set delta_t when using gravity
 void Grid3D::set_dt_Gravity()
 {
   // Delta_t for the hydro
