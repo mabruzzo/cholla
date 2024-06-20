@@ -170,8 +170,8 @@ void Cosmology::Create_Expansion_History_File(struct Parameters P)
   // convert now to string form
   char *dt = ctime(&now);
 
-  std::string message = std::string(Omega_M) + " " + std::string(Omega_K);
-  message += " " + std::string(Omega_R) + " " + std::string(Omega_L) + " " + std::string(w0) + " " + std::string(wa);
+  std::string message = std::to_string(Omega_M) + " " + std::to_string(Omega_K);
+  message += " " + std::to_string(Omega_R) + " " + std::to_string(Omega_L) + " " + std::to_string(w0) + " " + std::to_string(wa);
 
   std::ofstream out_file;
   out_file.open(file_name.c_str(), std::ios::app);
@@ -186,7 +186,7 @@ void Cosmology::Write_Expansion_History_Entry(void)
     return;
   }
 
-  std::string message = std::string(Cosmo.t_secs / MYR) + " " + std::string(Cosmo.current_a);
+  std::string message = std::to_string(Cosmo.t_secs / MYR) + " " + std::to_string(Cosmo.current_a);
   std::string file_name(EXPANSION_HISTORY_FILE_NAME);
   std::ofstream out_file;
   out_file.open(file_name.c_str(), std::ios::app);

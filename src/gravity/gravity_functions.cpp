@@ -128,7 +128,7 @@ void Grid3D::set_dt_Gravity()
   Particles.dt = dt_physical;
 
   // Write expansion history
-  Write_Expansion_History_Entry();
+  Cosmo.Write_Expansion_History_Entry();
 
     #else  // Not Cosmology
   // If NOT using COSMOLOGY
