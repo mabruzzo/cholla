@@ -15,8 +15,12 @@ void Cosmology::Initialize(struct Parameters *P, Grav3D &Grav, Particles3D &Part
   H0 /= 1000;  //[km/s / kpc]
   Omega_M = P->Omega_M;
   Omega_L = P->Omega_L;
-  Omega_K = 1 - (Omega_M + Omega_L);
+  Omega_R = P->Omega_R;
+  Omega_K = 1 - (Omega_M + Omega_L + Omega_R);
   Omega_b = P->Omega_b;
+  w0      = P->w0;
+  wa      = P->wa;
+
 
   if (strcmp(P->init, "Read_Grid") == 0) {
     // Read scale factor value from Particles

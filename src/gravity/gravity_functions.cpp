@@ -127,6 +127,9 @@ void Grid3D::set_dt_Gravity()
   chprintf(" t_physical: %f Myr   dt_physical: %f Myr\n", Cosmo.t_secs / MYR, Cosmo.dt_secs / MYR);
   Particles.dt = dt_physical;
 
+  //Write expansion history
+  Write_Expansion_History_Entry();
+
     #else  // Not Cosmology
   // If NOT using COSMOLOGY
 

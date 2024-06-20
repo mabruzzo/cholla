@@ -120,7 +120,7 @@ void Write_Data(Grid3D &G, struct Parameters P, int nfile)
 #endif
 
 #ifdef COSMOLOGY
-  G.Change_Cosmological_Frame_Sytem(false);
+  G.Change_Cosmological_Frame_System(false);
 #endif
 
 #ifndef ONLY_PARTICLES
@@ -175,7 +175,7 @@ void Write_Data(Grid3D &G, struct Parameters P, int nfile)
   } else {
     chprintf(" Saved Snapshot: %d     z:%f\n", nfile, G.Cosmo.current_z);
   }
-  G.Change_Cosmological_Frame_Sytem(true);
+  G.Change_Cosmological_Frame_System(true);
   chprintf("\n");
   G.H.Output_Now = false;
 #endif

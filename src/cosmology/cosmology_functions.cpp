@@ -5,13 +5,19 @@
   #include "../grid/grid_enum.h"
   #include "../io/io.h"
 
+
+
+
 void Grid3D::Initialize_Cosmology(struct Parameters *P)
 {
   chprintf("Initializing Cosmology... \n");
   Cosmo.Initialize(P, Grav, Particles);
 
+  //Create expansion history log file
+  Create_Log_File(P, Cosmo);
+
   // Change to comoving Cosmological System
-  Change_Cosmological_Frame_Sytem(true);
+  Change_Cosmological_Frame_System(true);
 
   if (fabs(Cosmo.current_a - Cosmo.next_output) < 1e-5) {
     H.Output_Now = true;
@@ -23,14 +29,16 @@ void Grid3D::Initialize_Cosmology(struct Parameters *P)
 Real Cosmology::Get_da_from_dt(Real dt)
 {
   Real a2    = current_a * current_a;
-  Real a_dot = sqrt(Omega_M / current_a + a2 * Omega_L + Omega_K) * H0;
+  Real fac_de = pow(a,-3*(1+w0+aw))*exp(-3*wa*(1-a));
+  Real a_dot = sqrt(Omega_R/a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
   return a_dot * dt;
 }
 
 Real Cosmology::Get_dt_from_da(Real da)
 {
   Real a2    = current_a * current_a;
-  Real a_dot = sqrt(Omega_M / current_a + a2 * Omega_L + Omega_K) * H0;
+  Real fac_de = pow(a,-3*(1+w0+aw))*exp(-3*wa*(1-a));
+  Real a_dot = sqrt(Omega_R/a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
   return da / a_dot;
 }
 
@@ -38,11 +46,13 @@ Real Cosmology::Get_Hubble_Parameter(Real a)
 {
   Real a2     = a * a;
   Real a3     = a2 * a;
-  Real factor = (Omega_M / a3 + Omega_K / a2 + Omega_L);
+  Real a4     = a2 * a2;
+  Real fac_de = pow(a,-3*(1+w0+aw))*exp(-3*wa*(1-a));
+  Real factor = (Omega_R / a4 + Omega_M / a3 + Omega_K / a2 + Omega_L*fac_de);
   return H0 * sqrt(factor);
 }
 
-void Grid3D::Change_Cosmological_Frame_Sytem(bool forward)
+void Grid3D::Change_Cosmological_Frame_System(bool forward)
 {
   if (forward) {
     chprintf(" Converting to Cosmological Comoving System\n");
@@ -128,6 +138,54 @@ void Grid3D::Change_GAS_Frame_System(bool forward)
       }
     }
   }
+}
+
+
+// writing the expansion history
+
+void Create_Expansion_History_File(struct Parameters P)
+{
+  if (not Is_Root_Proc()) {
+    return;
+  }
+
+  std::string file_name(EXPANSION_HISTORY_FILE_NAME);
+  chprintf("\nCreating Expansion History File: %s \n\n", file_name.c_str());
+
+  bool file_exists = false;
+  if (FILE *file = fopen(file_name.c_str(), "r")) {
+    file_exists = true;
+    chprintf("  File exists, appending values: %s \n\n", file_name.c_str());
+    fclose(file);
+  }
+
+  // current date/time based on current system
+  time_t now = time(0);
+  // convert now to string form
+  char *dt = ctime(&now);
+
+  std::string message = std::string(Omega_M) + " " + std::string(Omega_K);
+  message += " " + std::string(Omega_R) + " " + std::string(Omega_L) + " " + std::string(w0) + " " + std::string(wa);
+
+  std::ofstream out_file;
+  out_file.open(file_name.c_str(), std::ios::app);
+  out_file << "\n";
+  out_file << "Run date: " << dt;
+  out_file.close();
+}
+
+void Write_Expansion_History_Entry(void)
+{
+  if (not Is_Root_Proc()) {
+    return;
+  }
+
+  std::string message = std::string(Cosmo.t_secs/MYR) + " " + std::string(Cosmo.current_a);
+  std::string file_name(EXPANSION_HISTORY_FILE_NAME);
+  std::ofstream out_file;
+  out_file.open(file_name.c_str(), std::ios::app);
+  out_file << message.c_str() << std::endl;
+  out_file.close();
 }
 
 #endif
