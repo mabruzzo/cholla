@@ -115,8 +115,8 @@ void Grid3D::set_dt_Gravity()
       #ifdef AVERAGE_SLOW_CELLS
   // Set the min_delta_t for averaging a slow cell
   da_particles = fmin(da_particles, Cosmo.max_delta_a);
-  min_dt_slow = Cosmo.Get_dt_from_da(da_particles, Cosmo.current_a) / Particles.C_cfl * Cosmo.H0 / (Cosmo.current_a * 
-                                     Cosmo.current_a) / SLOW_FACTOR;
+  min_dt_slow = Cosmo.Get_dt_from_da(da_particles, Cosmo.current_a) / Particles.C_cfl * Cosmo.H0 / (Cosmo.current_a * Cosmo.current_a) / 
+                                     SLOW_FACTOR;
   H.min_dt_slow = min_dt_slow;
       #endif
 
