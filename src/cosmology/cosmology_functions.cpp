@@ -37,14 +37,14 @@ Real Cosmology::Get_dt_from_da_rk(Real da, Real a)
 {
   // Return dt/da * da
   // But compute dt/da using a Runge-Kutta integration step
-  Real a3  =    0.3;
-  Real a4  =    0.6;
-  Real a5  =    1.0;
-  Real a6  =    0.875;
-  Real c1  =   37.0 / 378.0;
-  Real c3  =  250.0 / 621.0;
-  Real c4  =  125.0 / 594.0;
-  Real c6  =  512.0 / 1771.0;
+  Real a3 = 0.3;
+  Real a4 = 0.6;
+  Real a5 = 1.0;
+  Real a6 = 0.875;
+  Real c1 = 37.0 / 378.0;
+  Real c3 = 250.0 / 621.0;
+  Real c4 = 125.0 / 594.0;
+  Real c6 = 512.0 / 1771.0;
 
 
   // compute RK average derivatives
@@ -54,7 +54,7 @@ Real Cosmology::Get_dt_from_da_rk(Real da, Real a)
   Real ak6 = dtda_cosmo(da, a + a6 * da);
 
   // compute timestep
-  Real dt = (c1 * ak1 + c3 * ak3 + c4 * ak4  + c6 * ak6);
+  Real dt = (c1 * ak1 + c3 * ak3 + c4 * ak4 + c6 * ak6);
 
   // return timestep
   return dt;
@@ -70,7 +70,7 @@ Real Cosmology::Get_da_from_dt(Real dt)
 
 Real Cosmology::Get_dt_from_da(Real da, Real a)
 {
-  return Get_dt_from_da_rk(da,a);
+  return Get_dt_from_da_rk(da, a);
   /* Real a2     = a * a;
   Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
   Real a_dot  = sqrt(Omega_R / a2 + Omega_M / a + a2 * Omega_L * fac_de + Omega_K) * H0;
