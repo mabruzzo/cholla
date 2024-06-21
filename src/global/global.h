@@ -328,7 +328,7 @@ struct Parameters {
   Real End_redshift;
 
   // File for the scale_factor output values for cosmological simulations
-  char scale_outputs_file[MAXLEN];  
+  char scale_outputs_file[MAXLEN];
 
 #define EXPANSION_HISTORY_FILE_NAME "expansion_history.txt"
 #endif
