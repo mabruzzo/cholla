@@ -178,11 +178,11 @@ void Grid3D::Change_GAS_Frame_System(bool forward)
  * gives a sensible result regardless of whether we are using MPI */
 static inline bool Is_Root_Proc()
 {
-#ifdef MPI_CHOLLA
+  #ifdef MPI_CHOLLA
   return procID == root;
-#else
+  #else
   return true;
-#endif
+  #endif
 }
 
 void Cosmology::Create_Expansion_History_File(struct Parameters *P)
