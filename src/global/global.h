@@ -326,9 +326,12 @@ struct Parameters {
   Real wa;
   Real Init_redshift;
   Real End_redshift;
-  char scale_outputs_file[MAXLEN];  // File for the scale_factor output values for cosmological simulations
+
+  // File for the scale_factor output values for cosmological simulations
+  char scale_outputs_file[MAXLEN];  
+
 #define EXPANSION_HISTORY_FILE_NAME "expansion_history.txt"
-#endif // COSMOLOGY
+#endif
 #ifdef TILED_INITIAL_CONDITIONS
   Real tile_length;
 #endif  // TILED_INITIAL_CONDITIONS

@@ -46,7 +46,6 @@ Real Cosmology::Get_dt_from_da_rk(Real da, Real a)
   Real c4 = 125.0 / 594.0;
   Real c6 = 512.0 / 1771.0;
 
-
   // compute RK average derivatives
   Real ak1 = dtda_cosmo(da, a);
   Real ak3 = dtda_cosmo(da, a + a3 * da);
