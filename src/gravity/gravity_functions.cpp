@@ -54,7 +54,7 @@ void Grid3D::set_dt_Gravity()
   // Here da_min is the minumum between da_particles and da_hydro
   Real da_hydro;
   da_hydro =
-      Cosmo.Get_da_from_dt(dt_hydro) * Cosmo.current_a * Cosmo.current_a / Cosmo.H0;  // Convet delta_t to delta_a
+      Cosmo.Get_da_from_dt(dt_hydro) * Cosmo.current_a * Cosmo.current_a / Cosmo.H0;  // Convert delta_t to delta_a
   da_min = fmin(da_hydro, da_particles);                                              // Find the minumum delta_a
   chprintf(" Delta_a_particles: %f      Delta_a_gas: %f   \n", da_particles, da_hydro);
 
@@ -121,7 +121,8 @@ void Grid3D::set_dt_Gravity()
       #endif
 
   // Compute the physical time
-  dt_physical   = Cosmo.Get_dt_from_da(Cosmo.delta_a);
+  // dt_physical   = Cosmo.Get_dt_from_da(Cosmo.delta_a);
+  dt_physical   = Cosmo.Get_dt_from_da_rk(Cosmo.delta_a);
   Cosmo.dt_secs = dt_physical * Cosmo.time_conversion;
   Cosmo.t_secs += Cosmo.dt_secs;
   chprintf(" t_physical: %f Myr   dt_physical: %f Myr\n", Cosmo.t_secs / MYR, Cosmo.dt_secs / MYR);

@@ -67,6 +67,8 @@ class Cosmology
 
   Real Get_Hubble_Parameter(Real a);
 
+  Real dtda_cosmo(Real da, Real a);
+  Real Get_dt_from_da_rk(Real dt);
   Real Get_da_from_dt(Real dt);
   Real Get_dt_from_da(Real da);
 

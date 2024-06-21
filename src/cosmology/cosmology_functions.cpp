@@ -24,6 +24,42 @@ void Grid3D::Initialize_Cosmology(struct Parameters *P)
   chprintf("Cosmology Successfully Initialized. \n\n");
 }
 
+Real Cosmology::dtda_cosmo(Real da, Real a)
+{
+  // Return dt/da * da
+  Real a2     = a * a;
+  Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - current_a));
+  Real a_dot  = sqrt(Omega_R / a2 + Omega_M / a + a2 * Omega_L * fac_de + Omega_K) * H0;
+  return da / a_dot;
+}
+
+Real Cosmology::Get_dt_from_da_rk(Real da)
+{
+  // Return dt/da * da
+  // But compute dt/da using a Runge-Kutta integration step
+  Real a3  =    0.3;
+  Real a4  =    0.6;
+  Real a5  =    1.0;
+  Real a6  =    0.875;
+  Real c1  =   37.0 / 378.0;
+  Real c3  =  250.0 / 621.0;
+  Real c4  =  125.0 / 594.0;
+  Real c6  =  512.0 / 1771.0;
+
+
+  // compute RK average derivatives
+  Real ak1 = dtda_cosmo(da, current_a);
+  Real ak3 = dtda_cosmo(da, current_a + a3 * da);
+  Real ak4 = dtda_cosmo(da, current_a + a4 * da);
+  Real ak6 = dtda_cosmo(da, current_a + a6 * da);
+
+  // compute timestep
+  Real dt = (c1 * ak1 + c3 * ak3 + c4 * ak4  + c6 * ak6);
+
+  // return timestep
+  return dt;
+}
+
 Real Cosmology::Get_da_from_dt(Real dt)
 {
   Real a2     = current_a * current_a;
