@@ -103,7 +103,7 @@ char *Trim(char *s)
 
 // NOLINTNEXTLINE(cert-err58-cpp)
 const std::set<std::string> optionalParams = {
-    "flag_delta", "ddelta_dt", "n_delta", "Lz", "Lx", "phi", "theta", 
+    "flag_delta", "ddelta_dt","n_delta","Lz","Lx","phi","theta", 
     "delta", "nzr", "nxr", "H0", "Omega_M", "Omega_L", "Omega_R", "Omega_K",
     "w0", "wa", "Init_redshift", "End_redshift", "tile_length", "n_proc_x", 
     "n_proc_y", "n_proc_z"};
