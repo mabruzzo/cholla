@@ -68,9 +68,9 @@ class Cosmology
   Real Get_Hubble_Parameter(Real a);
 
   Real dtda_cosmo(Real da, Real a);
-  Real Get_dt_from_da_rk(Real dt);
+  Real Get_dt_from_da_rk(Real da, Real a);
   Real Get_da_from_dt(Real dt);
-  Real Get_dt_from_da(Real da);
+  Real Get_dt_from_da(Real da, Real a);
 
   // write expansion history log file
   void Create_Expansion_History_File(struct Parameters *P);

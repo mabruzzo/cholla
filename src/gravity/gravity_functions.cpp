@@ -107,7 +107,7 @@ void Grid3D::set_dt_Gravity()
   // Set delta_a after it has been computed
   Cosmo.delta_a = da_min;
   // Convert delta_a back to delta_t
-  dt_min = Cosmo.Get_dt_from_da(Cosmo.delta_a) * Cosmo.H0 / (Cosmo.current_a * Cosmo.current_a);
+  dt_min = Cosmo.Get_dt_from_da(Cosmo.delta_a, Cosmo.current_a) * Cosmo.H0 / (Cosmo.current_a * Cosmo.current_a);
   // Set the new delta_t for the hydro step
   H.dt = dt_min;
   chprintf(" Current_a: %f    delta_a: %f     dt:  %f\n", Cosmo.current_a, Cosmo.delta_a, H.dt);
@@ -115,14 +115,13 @@ void Grid3D::set_dt_Gravity()
       #ifdef AVERAGE_SLOW_CELLS
   // Set the min_delta_t for averaging a slow cell
   da_particles = fmin(da_particles, Cosmo.max_delta_a);
-  min_dt_slow  = Cosmo.Get_dt_from_da(da_particles) / Particles.C_cfl * Cosmo.H0 / (Cosmo.current_a * Cosmo.current_a) /
+  min_dt_slow  = Cosmo.Get_dt_from_da(da_particles, Cosmo.current_a) / Particles.C_cfl * Cosmo.H0 / (Cosmo.current_a * Cosmo.current_a) /
                 SLOW_FACTOR;
   H.min_dt_slow = min_dt_slow;
       #endif
 
   // Compute the physical time
-  // dt_physical   = Cosmo.Get_dt_from_da(Cosmo.delta_a);
-  dt_physical   = Cosmo.Get_dt_from_da_rk(Cosmo.delta_a);
+  dt_physical   = Cosmo.Get_dt_from_da(Cosmo.delta_a, Cosmo.current_a);
   Cosmo.dt_secs = dt_physical * Cosmo.time_conversion;
   Cosmo.t_secs += Cosmo.dt_secs;
   chprintf(" t_physical: %f Myr   dt_physical: %f Myr\n", Cosmo.t_secs / MYR, Cosmo.dt_secs / MYR);

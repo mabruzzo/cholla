@@ -33,7 +33,7 @@ Real Cosmology::dtda_cosmo(Real da, Real a)
   return da / a_dot;
 }
 
-Real Cosmology::Get_dt_from_da_rk(Real da)
+Real Cosmology::Get_dt_from_da_rk(Real da, Real a)
 {
   // Return dt/da * da
   // But compute dt/da using a Runge-Kutta integration step
@@ -48,10 +48,10 @@ Real Cosmology::Get_dt_from_da_rk(Real da)
 
 
   // compute RK average derivatives
-  Real ak1 = dtda_cosmo(da, current_a);
-  Real ak3 = dtda_cosmo(da, current_a + a3 * da);
-  Real ak4 = dtda_cosmo(da, current_a + a4 * da);
-  Real ak6 = dtda_cosmo(da, current_a + a6 * da);
+  Real ak1 = dtda_cosmo(da, a);
+  Real ak3 = dtda_cosmo(da, a + a3 * da);
+  Real ak4 = dtda_cosmo(da, a + a4 * da);
+  Real ak6 = dtda_cosmo(da, a + a6 * da);
 
   // compute timestep
   Real dt = (c1 * ak1 + c3 * ak3 + c4 * ak4  + c6 * ak6);
@@ -68,12 +68,13 @@ Real Cosmology::Get_da_from_dt(Real dt)
   return a_dot * dt;
 }
 
-Real Cosmology::Get_dt_from_da(Real da)
+Real Cosmology::Get_dt_from_da(Real da, Real a)
 {
-  Real a2     = current_a * current_a;
-  Real fac_de = pow(current_a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - current_a));
-  Real a_dot  = sqrt(Omega_R / a2 + Omega_M / current_a + a2 * Omega_L * fac_de + Omega_K) * H0;
-  return da / a_dot;
+  return Get_dt_from_da_rk(da,a);
+  /* Real a2     = a * a;
+  Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
+  Real a_dot  = sqrt(Omega_R / a2 + Omega_M / a + a2 * Omega_L * fac_de + Omega_K) * H0;
+  return da / a_dot; */
 }
 
 Real Cosmology::Get_Hubble_Parameter(Real a)

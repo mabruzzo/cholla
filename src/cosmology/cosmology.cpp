@@ -45,8 +45,23 @@ void Cosmology::Initialize(struct Parameters *P, Grav3D &Grav, Particles3D &Part
   delta_a     = max_delta_a;
 
   // Initialize Time and set the time conversion
-  t_secs          = 0;
   time_conversion = KPC;
+  t_secs          = 0;
+
+  // get time offset
+  Real da_t_sec = 1.0e-2 * current_a;
+  Real a_t_sec  = 1.0e-6; // small but non-zero
+  Real dt_physical;
+  while(a_t_sec < current_a){
+    if(a_t_sec + da_t_sec > current_a){
+      da_t_sec = current_a - a_t_sec;
+    }
+    dt_physical   = Get_dt_from_da(da_t_sec, a_t_sec);
+    t_secs  += dt_physical * time_conversion;
+    a_t_sec += da_t_sec;
+    // chprintf(" Revised a_t_sec %f da_t_sec %f t_start : %e Myr\n", a_t_sec, da_t_sec, t_secs / MYR);
+  }
+  chprintf(" Revised t_start : %f Myr\n", t_secs / MYR);
 
   // Set Normalization factors
   r_0_dm          = P->xlen / P->nx;

@@ -81,7 +81,7 @@ Real Grid3D::Calc_Particles_dt_GPU()
   scale_factor = 1 / (Cosmo.current_a * Cosmo.Get_Hubble_Parameter(Cosmo.current_a)) * Cosmo.cosmo_h;
   vel_factor   = Cosmo.current_a / scale_factor;
   da_min       = vel_factor / max_dti;
-  dt_min       = Cosmo.Get_dt_from_da(da_min);
+  dt_min       = Cosmo.Get_dt_from_da(da_min, Cosmo.current_a);
     #else
   dt_min = 1 / max_dti;
     #endif
@@ -377,7 +377,7 @@ Real Grid3D::Calc_Particles_dt_Cosmo_function(part_int_t p_start, part_int_t p_e
   da_min = fmin(Particles.G.dx / vx_max, Particles.G.dy / vy_max);
   da_min = fmin(Particles.G.dz / vz_max, da_min);
   da_min *= vel_factor;
-  dt_min = Cosmo.Get_dt_from_da(da_min);
+  dt_min = Cosmo.Get_dt_from_da(da_min, Cosmo.current_a);
   return Particles.C_cfl * dt_min;
 }
 
