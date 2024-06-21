@@ -353,14 +353,14 @@ void system_test::SystemTestRunner::launchCholla()
   } catch (const std::filesystem::filesystem_error &error) {
     // This file might not exist and isn't required so don't worry if it doesn't exist
   }
-#ifdef COSMOLOGY
+  #ifdef COSMOLOGY
   try {
     std::filesystem::rename(::globalChollaRoot.getString() + "/expansion_history.txt", 
                             _outputDirectory + "/expansion_history.txt");
   } catch (const std::filesystem::filesystem_error &error) {
     // This file might not exist and isn't required so don't worry if it doesn't exist
   }
-#endif
+  #endif
 }
 // =============================================================================
 
