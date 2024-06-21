@@ -18,8 +18,8 @@
 
 // FUTURE FIX: The Hubble function was defined here because I couldn't get it
 // form other file, tried -dc flag when compiling buu paris broke.
-__device__ Real Get_Hubble_Parameter_dev(Real a, Real H0, Real Omega_M, Real Omega_L, Real Omega_K, 
-                                         Real Omega_R, Real w0, Real wa)
+__device__ Real Get_Hubble_Parameter_dev(Real a, Real H0, Real Omega_M, Real Omega_L, Real Omega_K, Real Omega_R,
+                                         Real w0, Real wa)
 {
   Real a2     = a * a;
   Real a3     = a2 * a;
