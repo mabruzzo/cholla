@@ -221,6 +221,7 @@ void Cosmology::Create_Expansion_History_File(struct Parameters *P)
   out_file.close();
 }
 
+/* Write the current entry to the expansion history file */
 void Cosmology::Write_Expansion_History_Entry(void)
 {
   if (not Is_Root_Proc()) {
