@@ -186,9 +186,9 @@ static inline bool Is_Root_Proc()
   #endif
 }
 
+/* create the file for recording the expansion history */
 void Cosmology::Create_Expansion_History_File(struct Parameters *P)
 {
-  // writing the expansion history
   if (not Is_Root_Proc()) {
     return;
   }
