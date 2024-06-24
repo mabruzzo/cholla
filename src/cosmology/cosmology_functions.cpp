@@ -181,17 +181,6 @@ void Grid3D::Change_GAS_Frame_System(bool forward)
   }
 }
 
-/* local function that designates whether we are using a root-process. It gives
- * gives a sensible result regardless of whether we are using MPI */
-static inline bool Is_Root_Proc()
-{
-  #ifdef MPI_CHOLLA
-  return procID == root;
-  #else
-  return true;
-  #endif
-}
-
 /* create the file for recording the expansion history */
 void Cosmology::Create_Expansion_History_File(struct Parameters *P)
 {

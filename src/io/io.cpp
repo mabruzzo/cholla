@@ -36,17 +36,7 @@
  * output routine */
 void Rotate_Point(Real x, Real y, Real z, Real delta, Real phi, Real theta, Real *xp, Real *yp, Real *zp);
 
-/* local function that designates whether we are using a root-process. It gives
- * gives a sensible result regardless of whether we are using MPI */
-static inline bool Is_Root_Proc()
-{
-#ifdef MPI_CHOLLA
-  return procID == root;
-#else
-  return true;
-#endif
-}
-
+/* Generate the log output file */
 void Create_Log_File(struct Parameters P)
 {
   if (not Is_Root_Proc()) {
@@ -75,6 +65,7 @@ void Create_Log_File(struct Parameters P)
   out_file.close();
 }
 
+/* Write an entry in the log output file */
 void Write_Message_To_Log_File(const char *message)
 {
   if (not Is_Root_Proc()) {
