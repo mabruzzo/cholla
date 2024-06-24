@@ -24,9 +24,9 @@ void Grid3D::Initialize_Cosmology(struct Parameters *P)
   chprintf("Cosmology Successfully Initialized. \n\n");
 }
 
+/* Computes dt/da * da */
 Real Cosmology::dtda_cosmo(Real da, Real a)
 {
-  // Return dt/da * da
   Real a2     = a * a;
   Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - current_a));
   Real a_dot  = sqrt(Omega_R / a2 + Omega_M / a + a2 * Omega_L * fac_de + Omega_K) * H0;
