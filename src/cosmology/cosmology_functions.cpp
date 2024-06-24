@@ -71,6 +71,12 @@ Real Cosmology::Get_da_from_dt(Real dt)
 Real Cosmology::Get_dt_from_da(Real da, Real a)
 {
   return Get_dt_from_da_rk(da, a);
+
+  /* The following commented code was the original Euler
+     integrator for computing time from the scale factor.
+     This has been left here temporarily to ease comparison
+     with the Runge-Kutta integrator, but it can be removed
+     eventually. */
   /* Real a2     = a * a;
   Real fac_de = pow(a, -3 * (1 + w0 + wa)) * exp(-3 * wa * (1 - a));
   Real a_dot  = sqrt(Omega_R / a2 + Omega_M / a + a2 * Omega_L * fac_de + Omega_K) * H0;
