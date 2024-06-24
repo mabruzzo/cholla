@@ -33,10 +33,11 @@ Real Cosmology::dtda_cosmo(Real da, Real a)
   return da / a_dot;
 }
 
+
+/* Compute dt/da * da. dt/da is computed with a Runge-Kutta integration step */
 Real Cosmology::Get_dt_from_da_rk(Real da, Real a)
 {
-  // Return dt/da * da
-  // But compute dt/da using a Runge-Kutta integration step
+  
   Real a3 = 0.3;
   Real a4 = 0.6;
   Real a5 = 1.0;
