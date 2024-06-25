@@ -90,7 +90,7 @@ class Thermal_State
   }
 };
 
-__device__ void get_temperature_indx(Real T, Chemistry_Header &Chem_H, int &temp_indx, Real &delta_T, Real temp_old,
+__device__ void get_temperature_indx(Real T, ChemistryHeader &Chem_H, int &temp_indx, Real &delta_T, Real temp_old,
                                      bool print)
 {
   Real logT, logT_start, d_logT, logT_l, logT_r;
@@ -118,7 +118,7 @@ __device__ Real interpolate_rate(Real *rate_table, int indx, Real delta)
   return rate_val;
 }
 
-__device__ Real Get_Cooling_Rates(Thermal_State &TS, Chemistry_Header &Chem_H, Real dens_number_conv, Real current_z,
+__device__ Real Get_Cooling_Rates(Thermal_State &TS, ChemistryHeader &Chem_H, Real dens_number_conv, Real current_z,
                                   Real temp_prev, float photo_h_HI, float photo_h_HeI, float photo_h_HeII, bool print)
 {
   int temp_indx;
@@ -201,7 +201,7 @@ __device__ Real Get_Cooling_Rates(Thermal_State &TS, Chemistry_Header &Chem_H, R
   return U_dot;
 }
 
-__device__ void Get_Reaction_Rates(Thermal_State &TS, Chemistry_Header &Chem_H, Real &k_coll_i_HI, Real &k_coll_i_HeI,
+__device__ void Get_Reaction_Rates(Thermal_State &TS, ChemistryHeader &Chem_H, Real &k_coll_i_HI, Real &k_coll_i_HeI,
                                    Real &k_coll_i_HeII, Real &k_coll_i_HI_HI, Real &k_coll_i_HI_HeI, Real &k_recomb_HII,
                                    Real &k_recomb_HeII, Real &k_recomb_HeIII, bool print)
 {
@@ -257,7 +257,7 @@ __device__ Real linear_interpolation(Real delta_x, int indx_l, int indx_r, float
   return v;
 }
 
-__device__ void Get_Current_UVB_Rates(Real current_z, Chemistry_Header &Chem_H, float &photo_i_HI, float &photo_i_HeI,
+__device__ void Get_Current_UVB_Rates(Real current_z, ChemistryHeader &Chem_H, float &photo_i_HI, float &photo_i_HeI,
                                       float &photo_i_HeII, float &photo_h_HI, float &photo_h_HeI, float &photo_h_HeII,
                                       bool print)
 {
@@ -287,7 +287,7 @@ __device__ void Get_Current_UVB_Rates(Real current_z, Chemistry_Header &Chem_H, 
   photo_h_HeII = linear_interpolation(delta_x, indx_l, indx_l + 1, Chem_H.photo_heat_HeII_rate_d);
 }
 
-__device__ Real Get_Chemistry_dt(Thermal_State &TS, Chemistry_Header &Chem_H, Real &HI_dot, Real &e_dot, Real U_dot,
+__device__ Real Get_Chemistry_dt(Thermal_State &TS, ChemistryHeader &Chem_H, Real &HI_dot, Real &e_dot, Real U_dot,
                                  Real k_coll_i_HI, Real k_coll_i_HeI, Real k_coll_i_HeII, Real k_coll_i_HI_HI,
                                  Real k_coll_i_HI_HeI, Real k_recomb_HII, Real k_recomb_HeII, Real k_recomb_HeIII,
                                  float photo_i_HI, float photo_i_HeI, float photo_i_HeII, int n_iter, Real HI_dot_prev,
@@ -357,7 +357,7 @@ __device__ Real Get_Chemistry_dt(Thermal_State &TS, Chemistry_Header &Chem_H, Re
   return dt;
 }
 
-__device__ void Update_Step(Thermal_State &TS, Chemistry_Header &Chem_H, Real dt, Real U_dot, Real k_coll_i_HI,
+__device__ void Update_Step(Thermal_State &TS, ChemistryHeader &Chem_H, Real dt, Real U_dot, Real k_coll_i_HI,
                             Real k_coll_i_HeI, Real k_coll_i_HeII, Real k_coll_i_HI_HI, Real k_coll_i_HI_HeI,
                             Real k_recomb_HII, Real k_recomb_HeII, Real k_recomb_HeIII, float photo_i_HI,
                             float photo_i_HeI, float photo_i_HeII, Real &HI_dot_prev, Real &e_dot_prev, Real &temp_prev,
@@ -431,7 +431,7 @@ __device__ void Update_Step(Thermal_State &TS, Chemistry_Header &Chem_H, Real dt
 }
 
 __global__ void Update_Chemistry_kernel(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields,
-                                        Real dt_hydro, Chemistry_Header Chem_H)
+                                        Real dt_hydro, ChemistryHeader Chem_H)
 {
   int id, xid, yid, zid, n_cells, n_iter;
   Real d, d_inv, vx, vy, vz;
@@ -606,7 +606,7 @@ __global__ void Update_Chemistry_kernel(Real *dev_conserved, int nx, int ny, int
 }
 
 void Do_Chemistry_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
-                         Chemistry_Header &Chem_H)
+                         ChemistryHeader &Chem_H)
 {
   float time;
   cudaEvent_t start, stop;

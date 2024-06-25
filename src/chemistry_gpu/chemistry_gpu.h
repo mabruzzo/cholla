@@ -10,7 +10,7 @@ typedef Real (*Rate_Function_T)(Real, Real);
 
 // #define TEXTURES_UVB_INTERPOLATION
 
-struct Chemistry_Header {
+struct ChemistryHeader {
   Real gamma;
   Real density_conversion;
   Real energy_conversion;
@@ -115,7 +115,7 @@ class Chem_GPU
   float *Ion_rates_HeI_d;
   float *Ion_rates_HeII_d;
 
-  struct Chemistry_Header H;
+  struct ChemistryHeader H;
 
   struct Fields {
     Real *temperature_h;
@@ -156,7 +156,7 @@ n_ghost, int n_fields, Real dt, Real gamma)
 ionization fractions of H and He and update the internal energy to account for
 radiative cooling and photoheating from the UV background. */
 void Do_Chemistry_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
-                         Chemistry_Header &Chem_H);
+                         ChemistryHeader &Chem_H);
 
 #endif
 #endif
