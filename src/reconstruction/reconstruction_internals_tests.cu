@@ -267,14 +267,18 @@ TEST(tALLReconstructionLoadData, CorrectInputExpectCorrectOutput)
   hydro_utilities::Primitive fiducial_data{
       13, {3.0769230769230771, 5.1538461538461542, 7.2307692307692308}, 39950.641025641031};
   #ifdef DE
+    #ifdef COSMOLOGY
+  fiducial_data.pressure = 98.666666666666671;
+    #else
   fiducial_data.pressure = 39950.641025641031;
-  #endif  // DE
+    #endif  // COSMOLOGY
+  #endif    // DE
   testing_utilities::Check_Results(fiducial_data.density, test_data.density, "density");
   testing_utilities::Check_Results(fiducial_data.velocity.x(), test_data.velocity.x(), "velocity.x()");
   testing_utilities::Check_Results(fiducial_data.velocity.y(), test_data.velocity.y(), "velocity.y()");
   testing_utilities::Check_Results(fiducial_data.velocity.z(), test_data.velocity.z(), "velocity.z()");
   testing_utilities::Check_Results(fiducial_data.pressure, test_data.pressure, "pressure");
-#endif    // MHD
+#endif      // MHD
 }
 
 TEST(tALLReconstructionComputeSlope, CorrectInputExpectCorrectOutput)
