@@ -2304,6 +2304,7 @@ void Grid3D::Read_Grid(struct Parameters P)
   // close the file
   status = H5Fclose(file_id);
 #endif  // BINARY or HDF5
+
 }
 
 /*! \fn Read_Grid_Binary(FILE *fp)
@@ -2541,17 +2542,39 @@ void Grid3D::Read_Grid_HDF5(hid_t file_id, struct Parameters P)
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.dust_density, "/dust_density");
     #endif  // DUST
 
-    #if defined(COOLING_GRACKLE) || defined(CHEMISTRY_GPU)
+      #if defined(COOLING_GRACKLE) || defined(CHEMISTRY_GPU)
+    #ifdef COSMOLOGY
+  if (P.nfile > 0) {
+    #endif  // COSMOLOGY
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.HI_density, "/HI_density");
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.HII_density, "/HII_density");
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.HeI_density, "/HeI_density");
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.HeII_density, "/HeII_density");
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.HeIII_density, "/HeIII_density");
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.e_density, "/e_density");
-      #ifdef GRACKLE_METALS
+        #ifdef GRACKLE_METALS
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.metal_density, "/metal_density");
-      #endif  // GRACKLE_METALS
-    #endif    // COOLING_GRACKLE , CHEMISTRY_GPU
+        #endif  // GRACKLE_METALS
+    #ifdef COSMOLOGY
+  } else {
+  // Initialize the density field
+    for (k = 0; k < H.nz_real; k++) {
+      for (j = 0; j < H.ny_real; j++) {
+        for (i = 0; i < H.nx_real + 1; i++) {
+          id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+          buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+          C.HI_density[id]    = INITIAL_FRACTION_HI * C.density[id];
+          C.HII_density[id]   = INITIAL_FRACTION_HII * C.density[id];
+          C.HeI_density[id]   = INITIAL_FRACTION_HEI * C.density[id];
+          C.HeII_density[id]  = INITIAL_FRACTION_HEII * C.density[id];
+          C.HeIII_density[id] = INITIAL_FRACTION_HEIII * C.density[id];
+          C.e_density[id]     = INITIAL_FRACTION_ELECTRON * C.density[id];
+        }
+      }
+    }
+  }
+    #endif  // COSMOLOGY
+      #endif    // COOLING_GRACKLE , CHEMISTRY_GPU
 
   #endif  // SCALAR
 
