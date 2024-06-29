@@ -2513,10 +2513,12 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
   min_l  = 1e65;
   max_l  = -1;
   // Do density first
+      /*for (i = 0; i < H.nx_real; i++) {
+        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;*/
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
-      for (i = 0; i < H.nx_real + 1; i++) {
-        id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+      for (i = 0; i < H.nx_real; i++) {
+        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
         buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += C.density[id];
         max_l   = std::max(max_l, C.density[id]);
@@ -2524,7 +2526,7 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
       }
     }
   }
-  mean_l /= ((H.nz_real + 1) * (H.ny_real) * (H.nx_real));
+  mean_l /= ((H.nz_real) * (H.ny_real) * (H.nx_real));
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
@@ -2546,8 +2548,8 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
   max_l  = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
-      for (i = 0; i < H.nx_real + 1; i++) {
-        id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+      for (i = 0; i < H.nx_real; i++) {
+        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
         buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += std::abs(C.momentum_x[id]);
         max_l   = std::max(max_l, std::abs(C.momentum_x[id]));
@@ -2555,7 +2557,7 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
       }
     }
   }
-  mean_l /= ((H.nz_real + 1) * (H.ny_real) * (H.nx_real));
+  mean_l /= ((H.nz_real) * (H.ny_real) * (H.nx_real));
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
@@ -2576,8 +2578,8 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
   max_l  = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
-      for (i = 0; i < H.nx_real + 1; i++) {
-        id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+      for (i = 0; i < H.nx_real; i++) {
+        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
         buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += std::abs(C.momentum_y[id]);
         max_l   = std::max(max_l, std::abs(C.momentum_y[id]));
@@ -2585,7 +2587,7 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
       }
     }
   }
-  mean_l /= ((H.nz_real + 1) * (H.ny_real) * (H.nx_real));
+  mean_l /= ((H.nz_real) * (H.ny_real) * (H.nx_real));
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
@@ -2606,8 +2608,8 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
   max_l  = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
-      for (i = 0; i < H.nx_real + 1; i++) {
-        id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+      for (i = 0; i < H.nx_real; i++) {
+        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
         buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += std::abs(C.momentum_z[id]);
         max_l   = std::max(max_l, std::abs(C.momentum_z[id]));
@@ -2615,7 +2617,7 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
       }
     }
   }
-  mean_l /= ((H.nz_real + 1) * (H.ny_real) * (H.nx_real));
+  mean_l /= ((H.nz_real) * (H.ny_real) * (H.nx_real));
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
@@ -2635,8 +2637,8 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
   max_l  = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
-      for (i = 0; i < H.nx_real + 1; i++) {
-        id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+      for (i = 0; i < H.nx_real; i++) {
+        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
         buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += C.Energy[id];
         max_l   = std::max(max_l, C.Energy[id]);
@@ -2644,7 +2646,7 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
       }
     }
   }
-  mean_l /= ((H.nz_real + 1) * (H.ny_real) * (H.nx_real));
+  mean_l /= ((H.nz_real) * (H.ny_real) * (H.nx_real));
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
@@ -2667,14 +2669,10 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
   mean_l = 0;
   min_l = 1e65;
   max_l = -1;
-  // Copy the internal Energy array to the grid
-  mean_l = 0;
-  min_l  = 1e65;
-  max_l  = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
-      for (i = 0; i < H.nx_real + 1; i++) {
-        id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+      for (i = 0; i < H.nx_real; i++) {
+        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
         buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += C.GasEnergy[id];
         max_l   = std::max(max_l, C.GasEnergy[id]);
@@ -2777,8 +2775,8 @@ void Grid3D::Read_Grid_HDF5(hid_t file_id, struct Parameters P)
   // Initialize the density field
     for (k = 0; k < H.nz_real; k++) {
       for (j = 0; j < H.ny_real; j++) {
-        for (i = 0; i < H.nx_real + 1; i++) {
-          id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        for (i = 0; i < H.nx_real; i++) {
+          id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
           buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
           C.HI_density[id]    = INITIAL_FRACTION_HI * C.density[id];
           C.HII_density[id]   = INITIAL_FRACTION_HII * C.density[id];
