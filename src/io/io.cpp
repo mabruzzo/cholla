@@ -2680,8 +2680,8 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
 
         temp = C.GasEnergy[id] / C.density[id] * ( gama - 1 ) * MP / KB * 1e10 ;
         temp_mean_l += temp;
-        temp_max_l = std::max(temp_max_l, C.GasEnergy[id]);
-        temp_min_l = std::min(temp_min_l, C.GasEnergy[id]);
+        temp_max_l = std::max(temp_max_l, temp);
+        temp_min_l = std::min(temp_min_l, temp);
       }
     }
   }
