@@ -530,6 +530,12 @@ class Grid3D
   void Read_Grid_HDF5(hid_t file_id, struct Parameters P);
 #endif
 
+#if defined(PRINT_INITIAL_STATS) && defined(COSMOLOGY)
+  /*! \fn void Print_Grid_Stats(struct Parameters P)
+   *  \brief Compute stats for a grid property. */
+  void Print_Grid_Stats(struct Parameters P);
+#endif 
+
   /*! \fn void Reset(void)
    *  \brief Reset the Grid3D class. */
   void Reset(void);
