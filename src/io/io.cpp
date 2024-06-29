@@ -2502,6 +2502,9 @@ void Read_Grid_HDF5_Field_Magnetic(hid_t file_id, Real *dataset_buffer, Header H
  *  \brief Compute stats for a grid property. */
 void Grid3D::Print_Grid_Stats(struct Parameters P)
 {
+  int i, j, k, id, buf_id;
+  Real mean_l, min_l, max_l;
+  Real mean_g, min_g, max_g;
 
   // Print several interesting numbers
 
@@ -2546,7 +2549,7 @@ void Grid3D::Print_Grid_Stats(struct Parameters P)
       for (i = 0; i < H.nx_real + 1; i++) {
         id               = (i + H.n_ghost - 1) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
         buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
-        mean_l += std::abs(momentum_x[id]);
+        mean_l += std::abs(C.momentum_x[id]);
         max_l   = std::max(max_l, std::abs(C.momentum_x[id]));
         min_l   = std::min(min_l, std::abs(C.momentum_x[id]));
       }
