@@ -72,7 +72,8 @@ typedef double Real;
 // - In the future, we run tests and revisit the choice of DE_ETA_1 in
 //   cosmological simulations
 #ifdef COSMOLOGY
-  #define DE_ETA_1 10.0
+//  #define DE_ETA_1 10.0
+  #define DE_ETA_1 0.001
 #else
   #define DE_ETA_1 \
     0.001  // Ratio of U to E for which  Internal Energy is used to compute the
