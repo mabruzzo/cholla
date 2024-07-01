@@ -55,11 +55,10 @@ void Grid3D::Initialize_Chemistry(struct Parameters *P)
   Chem.H.time_units       = kpc_km;
   Chem.H.dens_number_conv = Chem.H.density_units / MH;
   #ifdef COSMOLOGY
-  Chem.H.a_value          = Cosmo.current_a;
-  Chem.H.density_units    = Chem.H.density_units / Chem.H.a_value / Chem.H.a_value / Chem.H.a_value;
-  Chem.H.length_units     = Chem.H.length_units / Cosmo.cosmo_h * Chem.H.a_value;
-  Chem.H.time_units       = Chem.H.time_units / Cosmo.cosmo_h;
-  Chem.H.dens_number_conv = Chem.H.dens_number_conv * pow(Chem.H.a_value, 3);
+  Chem.H.a_value       = Cosmo.current_a;
+  Chem.H.density_units = Chem.H.density_units / Chem.H.a_value / Chem.H.a_value / Chem.H.a_value;
+  Chem.H.length_units  = Chem.H.length_units / Cosmo.cosmo_h * Chem.H.a_value;
+  Chem.H.time_units    = Chem.H.time_units / Cosmo.cosmo_h;
   #endif  // COSMOLOGY
   Chem.H.velocity_units = Chem.H.length_units / Chem.H.time_units;
 
