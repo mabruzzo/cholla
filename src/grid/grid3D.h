@@ -533,7 +533,7 @@ class Grid3D
 #if defined(PRINT_INITIAL_STATS) && defined(COSMOLOGY)
   /*! \fn void Print_Grid_Stats(void)
    *  \brief Compute stats for grid properties. */
-  void Print_Grid_Stats(void)
+  void Print_Grid_Stats(void);
 #endif 
 
   /*! \fn void Reset(void)
