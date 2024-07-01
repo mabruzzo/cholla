@@ -944,11 +944,7 @@ __global__ void Select_Internal_Energy_1D(Real *dev_conserved, int nx, int n_gho
     // We only use the "advected" internal energy if both:
     // - the thermal energy divided by total energy is a small fraction (smaller than eta_1)
     // - AND we aren't masking shock heating (details controlled by Emax & eta_2)
-  #ifdef COSMOLOGY
-    if (U_total / Emax > eta_2) {
-  #else
     if ((U_total / E > eta_1) or (U_total / Emax > eta_2)) {
-  #endif
       U = U_total;
     } else {
       U = U_advected;
@@ -1010,11 +1006,7 @@ __global__ void Select_Internal_Energy_2D(Real *dev_conserved, int nx, int ny, i
     // We only use the "advected" internal energy if both:
     // - the thermal energy divided by total energy is a small fraction (smaller than eta_1)
     // - AND we aren't masking shock heating (details controlled by Emax & eta_2)
-  #ifdef COSMOLOGY
-    if (U_total / Emax > eta_2) {
-  #else
     if ((U_total / E > eta_1) or (U_total / Emax > eta_2)) {
-  #endif
       U = U_total;
     } else {
       U = U_advected;
@@ -1083,11 +1075,7 @@ __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, i
     // We only use the "advected" internal energy if both:
     // - the thermal energy divided by total energy is a small fraction (smaller than eta_1)
     // - AND we aren't masking shock heating (details controlled by Emax & eta_2)
-  #ifdef COSMOLOGY
-    if (U_total / Emax > eta_2) {
-  #else
     if ((U_total / E > eta_1) or (U_total / Emax > eta_2)) {
-  #endif
       U = U_total;
     } else {
       U = U_advected;
