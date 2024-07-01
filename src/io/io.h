@@ -18,6 +18,10 @@ static inline bool Is_Root_Proc()
 #endif
 }
 
+/*! \fn void Print_Stats(void)
+ *  \brief Compute stats for a grid. */
+void Print_Stats(Grid3D &G);
+
 /* Write the data */
 void Write_Data(Grid3D& G, struct Parameters P, int nfile);
 
