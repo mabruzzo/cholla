@@ -9,6 +9,9 @@
 
 // #define OUTPUT_SKEWERS_TRANSMITTED_FLUX
 
+using std::string;
+using std::ifstream;
+
   #ifdef OUTPUT_SKEWERS
 void Grid3D::Output_Skewers_File(struct Parameters *P)
 {
