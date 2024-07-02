@@ -534,7 +534,7 @@ class Grid3D
   /*! \fn void Print_Grid_Stats(void)
    *  \brief Compute stats for grid properties. */
   void Print_Grid_Stats(void);
-#endif 
+#endif
 
   /*! \fn void Reset(void)
    *  \brief Reset the Grid3D class. */

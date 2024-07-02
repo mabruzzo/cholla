@@ -2304,7 +2304,6 @@ void Grid3D::Read_Grid(struct Parameters P)
   // close the file
   status = H5Fclose(file_id);
 #endif  // BINARY or HDF5
-
 }
 
 /*! \fn Read_Grid_Binary(FILE *fp)
@@ -2498,10 +2497,9 @@ void Read_Grid_HDF5_Field_Magnetic(hid_t file_id, Real *dataset_buffer, Header H
 }
 
 #if defined(PRINT_INITIAL_STATS) && defined(COSMOLOGY)
-
-/*! \fn void Print_Stats(void)
+/*! \fn void Print_Stats(Grid3D& G)
  *  \brief Compute stats for a grid. */
-void Print_Stats(Grid3D &G)
+void Print_Stats(Grid3D& G)
 {
   // Synchronize
   cudaMemcpy(G.C.density, G.C.device, G.H.n_fields * G.H.n_cells * sizeof(Real), cudaMemcpyDeviceToHost);
@@ -2521,17 +2519,17 @@ void Grid3D::Print_Grid_Stats(void)
 
   // Density stats
   mean_l = 0;
-  min_l  = 1e65;
-  max_l  = -1;
+  min_l = 1e65;
+  max_l = -1;
   // Do density first
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
       for (i = 0; i < H.nx_real; i++) {
-        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
-        buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+        id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += C.density[id];
-        max_l   = std::max(max_l, C.density[id]);
-        min_l   = std::min(min_l, C.density[id]);
+        max_l = std::max(max_l, C.density[id]);
+        min_l = std::min(min_l, C.density[id]);
       }
     }
   }
@@ -2539,30 +2537,29 @@ void Grid3D::Print_Grid_Stats(void)
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
-  max_g  = ReduceRealMax(max_l);
-  min_g  = ReduceRealMin(min_l);
+  max_g = ReduceRealMax(max_l);
+  min_g = ReduceRealMin(min_l);
   mean_l = mean_g;
-  max_l  = max_g;
-  min_l  = min_g;
+  max_l = max_g;
+  min_l = min_g;
   #endif  // MPI_CHOLLA
-  chprintf(
-      " Density  Mean: %f   Min: %f   Max: %f      [ h^2 Msun kpc^-3] \n",
-      mean_l, min_l, max_l);
+  chprintf("Density  Mean: %f   Min: %f   Max: %f      [ h^2 Msun kpc^-3] \n",
+            mean_l, min_l, max_l);
 
   // Momentum stats
 
   // x momenta
   mean_l = 0;
-  min_l  = 1e65;
-  max_l  = -1;
+  min_l = 1e65;
+  max_l = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
       for (i = 0; i < H.nx_real; i++) {
-        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
-        buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+        id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += std::abs(C.momentum_x[id]);
-        max_l   = std::max(max_l, std::abs(C.momentum_x[id]));
-        min_l   = std::min(min_l, std::abs(C.momentum_x[id]));
+        max_l = std::max(max_l, std::abs(C.momentum_x[id]));
+        min_l = std::min(min_l, std::abs(C.momentum_x[id]));
       }
     }
   }
@@ -2570,29 +2567,28 @@ void Grid3D::Print_Grid_Stats(void)
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
-  max_g  = ReduceRealMax(max_l);
-  min_g  = ReduceRealMin(min_l);
+  max_g = ReduceRealMax(max_l);
+  min_g = ReduceRealMin(min_l);
   mean_l = mean_g;
-  max_l  = max_g;
-  min_l  = min_g;
+  max_l = max_g;
+  min_l = min_g;
   #endif  // MPI_CHOLLA
-  chprintf(
-      " abs(Momentum X)  Mean: %f   Min: %f   Max: %f      [ h^2 Msun kpc^-3 km s^-1] \n",
-      mean_l, min_l, max_l);
+  chprintf(" abs(Momentum X)  Mean: %f   Min: %f   Max: %f      [ h^2 Msun kpc^-3 km s^-1] \n",
+           mean_l, min_l, max_l);
 
 
   // y momenta
   mean_l = 0;
-  min_l  = 1e65;
-  max_l  = -1;
+  min_l = 1e65;
+  max_l = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
       for (i = 0; i < H.nx_real; i++) {
-        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
-        buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+        id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += std::abs(C.momentum_y[id]);
-        max_l   = std::max(max_l, std::abs(C.momentum_y[id]));
-        min_l   = std::min(min_l, std::abs(C.momentum_y[id]));
+        max_l = std::max(max_l, std::abs(C.momentum_y[id]));
+        min_l = std::min(min_l, std::abs(C.momentum_y[id]));
       }
     }
   }
@@ -2600,11 +2596,11 @@ void Grid3D::Print_Grid_Stats(void)
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
-  max_g  = ReduceRealMax(max_l);
-  min_g  = ReduceRealMin(min_l);
+  max_g = ReduceRealMax(max_l);
+  min_g = ReduceRealMin(min_l);
   mean_l = mean_g;
-  max_l  = max_g;
-  min_l  = min_g;
+  max_l = max_g;
+  min_l = min_g;
   #endif  // MPI_CHOLLA
   chprintf(
       " abs(Momentum Y)  Mean: %f   Min: %f   Max: %f      [ h^2 Msun kpc^-3 km s^-1] \n",
@@ -2613,16 +2609,16 @@ void Grid3D::Print_Grid_Stats(void)
 
   // z momenta
   mean_l = 0;
-  min_l  = 1e65;
-  max_l  = -1;
+  min_l = 1e65;
+  max_l = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
       for (i = 0; i < H.nx_real; i++) {
-        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
-        buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+        id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += std::abs(C.momentum_z[id]);
-        max_l   = std::max(max_l, std::abs(C.momentum_z[id]));
-        min_l   = std::min(min_l, std::abs(C.momentum_z[id]));
+        max_l = std::max(max_l, std::abs(C.momentum_z[id]));
+        min_l = std::min(min_l, std::abs(C.momentum_z[id]));
       }
     }
   }
@@ -2630,11 +2626,11 @@ void Grid3D::Print_Grid_Stats(void)
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
-  max_g  = ReduceRealMax(max_l);
-  min_g  = ReduceRealMin(min_l);
+  max_g = ReduceRealMax(max_l);
+  min_g = ReduceRealMin(min_l);
   mean_l = mean_g;
-  max_l  = max_g;
-  min_l  = min_g;
+  max_l = max_g;
+  min_l = min_g;
   #endif  // MPI_CHOLLA
   chprintf(
       " abs(Momentum Z)  Mean: %f   Min: %f   Max: %f      [ h^2 Msun kpc^-3 km s^-1] \n",
@@ -2642,16 +2638,16 @@ void Grid3D::Print_Grid_Stats(void)
 
   // Energy
   mean_l = 0;
-  min_l  = 1e65;
-  max_l  = -1;
+  min_l = 1e65;
+  max_l = -1;
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
       for (i = 0; i < H.nx_real; i++) {
-        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
-        buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+        id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += C.Energy[id];
-        max_l   = std::max(max_l, C.Energy[id]);
-        min_l   = std::min(min_l, C.Energy[id]);
+        max_l = std::max(max_l, C.Energy[id]);
+        min_l = std::min(min_l, C.Energy[id]);
       }
     }
   }
@@ -2659,11 +2655,11 @@ void Grid3D::Print_Grid_Stats(void)
 
   #if MPI_CHOLLA
   mean_g = ReduceRealAvg(mean_l);
-  max_g  = ReduceRealMax(max_l);
-  min_g  = ReduceRealMin(min_l);
+  max_g = ReduceRealMax(max_l);
+  min_g = ReduceRealMin(min_l);
   mean_l = mean_g;
-  max_l  = max_g;
-  min_l  = min_g;
+  max_l = max_g;
+  min_l = min_g;
   #endif  // MPI_CHOLLA
   chprintf(
       " Energy  Mean: %f   Min: %f   Max: %f      [ h^2 Msun kpc^-3 km^2 s^-2 ]\n",
@@ -2681,15 +2677,15 @@ void Grid3D::Print_Grid_Stats(void)
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
       for (i = 0; i < H.nx_real; i++) {
-        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
-        buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+        id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         vx = C.momentum_x[id] / C.density[id];
         vy = C.momentum_y[id] / C.density[id];
         vz = C.momentum_z[id] / C.density[id];
         gase = C.Energy[id] - 0.5 * C.density[id] * (vx * vx + vy * vy + vz * vz);
         mean_l += gase;
-        max_l   = std::max(max_l, gase);
-        min_l   = std::min(min_l, gase);
+        max_l = std::max(max_l, gase);
+        min_l = std::min(min_l, gase);
 
         temp = gase / C.density[id] * ( gama - 1 ) * MP / KB * 1e10 ;
         temp_mean_l += temp;
@@ -2732,11 +2728,11 @@ void Grid3D::Print_Grid_Stats(void)
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
       for (i = 0; i < H.nx_real; i++) {
-        id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
-        buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+        id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += C.GasEnergy[id];
-        max_l   = std::max(max_l, C.GasEnergy[id]);
-        min_l   = std::min(min_l, C.GasEnergy[id]);
+        max_l = std::max(max_l, C.GasEnergy[id]);
+        min_l = std::min(min_l, C.GasEnergy[id]);
 
         temp = C.GasEnergy[id] / C.density[id] * ( gama - 1 ) * MP / KB * 1e10 ;
         temp_mean_l += temp;
@@ -2818,9 +2814,9 @@ void Grid3D::Read_Grid_HDF5(hid_t file_id, struct Parameters P)
     #endif  // DUST
 
       #if defined(COOLING_GRACKLE) || defined(CHEMISTRY_GPU)
-    #ifdef COSMOLOGY
+        #ifdef COSMOLOGY
   if (P.nfile > 0) {
-    #endif  // COSMOLOGY
+        #endif  // COSMOLOGY
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.HI_density, "/HI_density");
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.HII_density, "/HII_density");
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.HeI_density, "/HeI_density");
@@ -2830,27 +2826,26 @@ void Grid3D::Read_Grid_HDF5(hid_t file_id, struct Parameters P)
         #ifdef GRACKLE_METALS
   Read_Grid_HDF5_Field(file_id, dataset_buffer, H, C.metal_density, "/metal_density");
         #endif  // GRACKLE_METALS
-    #ifdef COSMOLOGY
+        #ifdef COSMOLOGY
   } else {
   // Initialize the density field
     for (k = 0; k < H.nz_real; k++) {
       for (j = 0; j < H.ny_real; j++) {
         for (i = 0; i < H.nx_real; i++) {
-          id               = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
-          buf_id           = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
-          C.HI_density[id]    = INITIAL_FRACTION_HI * C.density[id];
-          C.HII_density[id]   = INITIAL_FRACTION_HII * C.density[id];
-          C.HeI_density[id]   = INITIAL_FRACTION_HEI * C.density[id];
-          C.HeII_density[id]  = INITIAL_FRACTION_HEII * C.density[id];
+          id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+          buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
+          C.HI_density[id] = INITIAL_FRACTION_HI * C.density[id];
+          C.HII_density[id] = INITIAL_FRACTION_HII * C.density[id];
+          C.HeI_density[id] = INITIAL_FRACTION_HEI * C.density[id];
+          C.HeII_density[id] = INITIAL_FRACTION_HEII * C.density[id];
           C.HeIII_density[id] = INITIAL_FRACTION_HEIII * C.density[id];
-          C.e_density[id]     = INITIAL_FRACTION_ELECTRON * C.density[id];
+          C.e_density[id] = INITIAL_FRACTION_ELECTRON * C.density[id];
         }
       }
     }
   }
-    #endif  // COSMOLOGY
+        #endif  // COSMOLOGY
       #endif    // COOLING_GRACKLE , CHEMISTRY_GPU
-
   #endif  // SCALAR
 
   // MHD only valid in 3D case

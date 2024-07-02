@@ -63,7 +63,7 @@ __global__ void PPMP_cuda(Real *dev_conserved, Real *dev_bounds_L, Real *dev_bou
   // declare other variables
   Real del_q_imo, del_q_i, del_q_ipo;
 
-  //#ifndef VL
+  // #ifndef VL
   #ifdef CTU
   Real cs, cl, cr;                            // sound speed in cell i, and at left and right boundaries
   Real del_d, del_vx, del_vy, del_vz, del_p;  // "slope" accross cell i
