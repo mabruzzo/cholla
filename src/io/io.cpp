@@ -2497,9 +2497,9 @@ void Read_Grid_HDF5_Field_Magnetic(hid_t file_id, Real *dataset_buffer, Header H
 }
 
 #if defined(PRINT_INITIAL_STATS) && defined(COSMOLOGY)
-/*! \fn void Print_Stats(Grid3D& G)
+/*! \fn void Print_Stats(Grid3D &G)
  *  \brief Compute stats for a grid. */
-void Print_Stats(Grid3D& G)
+void Print_Stats(Grid3D &G)
 {
   // Synchronize
   cudaMemcpy(G.C.density, G.C.device, G.H.n_fields * G.H.n_cells * sizeof(Real), cudaMemcpyDeviceToHost);
@@ -2519,13 +2519,13 @@ void Grid3D::Print_Grid_Stats(void)
 
   // Density stats
   mean_l = 0;
-  min_l = 1e65;
-  max_l = -1;
+  min_l  = 1e65;
+  max_l  = -1;
   // Do density first
   for (k = 0; k < H.nz_real; k++) {
     for (j = 0; j < H.ny_real; j++) {
       for (i = 0; i < H.nx_real; i++) {
-        id = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
+        id   = (i + H.n_ghost) + (j + H.n_ghost) * H.nx + (k + H.n_ghost) * H.nx * H.ny;
         buf_id = k + j * (H.nz_real) + i * (H.nz_real) * (H.ny_real);
         mean_l += C.density[id];
         max_l = std::max(max_l, C.density[id]);
