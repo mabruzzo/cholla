@@ -21,7 +21,7 @@ from concat_3d_data import concat_3d_dataset
 parser = argparse.ArgumentParser(
     description = ("Concatenates HDF5 ouputs produced by Cholla")
 )
-concat_internals.add_common_cli_args(parser)
+concat_internals.add_common_cli_args(parser, num_processes_choice == 'omit')
 
 _2D_kinds = ("proj", "slice", "rot_proj")
 

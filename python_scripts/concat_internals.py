@@ -8,8 +8,11 @@ import argparse
 import functools
 import pathlib
 import re
-from typing import Optional
 import warnings
+
+# imports for type annotations:
+from collections.abc import Mapping
+from typing import Optional
 
 # ==============================================================================
 def destination_safe_open(filename: pathlib.Path) -> h5py.File:
@@ -41,6 +44,38 @@ def destination_safe_open(filename: pathlib.Path) -> h5py.File:
 
   return destination_file
 # ==============================================================================
+
+def infer_numfiles_from_header(hdr: Mapping) -> int:
+  """Infers the total number of ranks that cholla was run with to produce this
+  file. Equivalently, this returns the number of files that must be
+  concatenated.
+
+  Parameters
+  ----------
+  hdr: Mapping
+    ``dict``-like object specifying the core attributes of an hdf5 file. This
+    is commonly the value returned by the ``attrs`` property of a ``h5py.File``
+    instance (but we don't really care about the type).
+
+  Returns
+  -------
+  int
+    The number of files that must be concatenated
+
+  Notes
+  -----
+  In the future, it would be nice to directly encode this information rather
+  than requiring us to encode it
+  """
+  dims, dims_local = hdr['dims'], hdr['dims_local']
+  assert np.issubdtype(dims.dtype, np.signedinteger) # sanity check
+  assert np.issubdtype(dims_local.dtype, np.signedinteger) # sanity check
+
+  blocks_per_ax, remainders = np.divmod(dims, dims_local, dtype = 'i8')
+  assert np.all(blocks_per_ax > 0) and np.all(remainders == 0)  # sanity check
+
+  return int(np.prod(blocks_per_ax))
+
 
 # ==============================================================================
 def copy_header(source_file: h5py.File, destination_file: h5py.File) -> h5py.File:
@@ -116,7 +151,8 @@ def add_common_cli_args(cli: argparse.ArgumentParser):
   """
 
   # ============================================================================
-  def concat_output(raw_argument: str) -> list:
+  def concat_output(raw_argument: str,
+                    num_processes_choice: str) -> list:
     """Function used to parse the `--concat-output` argument
     """
     warnings.warn(
@@ -195,11 +231,21 @@ def add_common_cli_args(cli: argparse.ArgumentParser):
     return tuple([int(i) for i in cleaned_argument.split(',')])
   # ============================================================================
 
+  if num_processes_choice == 'use':
+    cli.add_argument(
+      '-n', '--num-processes',    type=positive_int,  required=True,
+      help='The number of processes that were used while running Cholla.')
+  elif num_processes_choice == 'deprecate':
+    cli.add_argument(
+      '-n', '--num-processes', type=positive_int, required=False,
+      default = None
+      help='DEPRECATED: The number of processes that were used while running Cholla.')
+  elif num_processes_choice != 'omit':
+    raise ValueError('invalid value passed for num_processes_choice')
+
   # Required Arguments
   cli.add_argument('-s', '--source-directory', type=pathlib.Path,  required=True, help='The path to the directory for the source HDF5 files.')
-  cli.add_argument('-o', '--output-directory', type=pathlib.Path,  required=True, help='The path to the directory to write out the concatenated HDF5 files.')
-  cli.add_argument('-n', '--num-processes',    type=positive_int,  required=True,
-    help='The number of processes that were used while running Cholla.')
+  cli.add_argument('-o', '--output-directory', type=pathlib.Path,  required=True, help='The path to the directory to write out the concatenated HDF5 files.') 
 
   grp = cli.add_mutually_exclusive_group(required=True)
   grp.add_argument(
@@ -222,7 +268,7 @@ def add_common_cli_args(cli: argparse.ArgumentParser):
   cli.add_argument('--chunking',               type=chunk_arg,     default=None, nargs='?', const=True, help='Enable chunking of the output file. Default is `False`. If set without an argument then the chunk size will be automatically chosen or a tuple can be passed to indicate the chunk size desired.')
 
 
-def common_cli() -> argparse.ArgumentParser:
+def common_cli(num_processes_choice = 'use') -> argparse.ArgumentParser:
   """This function provides the basis for the common CLI amongst the various
   concatenation scripts.
   
@@ -240,7 +286,7 @@ def common_cli() -> argparse.ArgumentParser:
   """
   # Initialize the CLI
   cli = argparse.ArgumentParser()
-  add_common_cli_args(cli)
+  add_common_cli_args(cli, num_processes_choice = num_processes_choice)
   return cli
 
 # ==============================================================================
