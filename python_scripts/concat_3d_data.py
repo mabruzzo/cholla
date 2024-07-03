@@ -74,7 +74,7 @@ def concat_3d_dataset(output_directory: pathlib.Path,
   with h5py.File(source_fname_0, 'r') as source_file:
 
     # determine how many files data must be concatenated from
-    num_files = concat_internals.infer_numfiles_from_header(hdr)
+    num_files = concat_internals.infer_numfiles_from_header(source_file.attrs)
 
     if (num_processes is not None) and (num_processes != num_files):
       raise RuntimeError(
@@ -108,7 +108,7 @@ def concat_3d_dataset(output_directory: pathlib.Path,
                                       compression_opts=compression_options)
 
   # loop over files for a given output
-  for i in range(0, num_processes):
+  for i in range(0, num_files):
     # open the input file for reading
     source_file = h5py.File(build_source_path(proc_id = i, nfile = output_number), 'r')
 
@@ -139,7 +139,7 @@ if __name__ == '__main__':
   from timeit import default_timer
   start = default_timer()
 
-  cli = concat_internals.common_cli(num_processes_choice == 'deprecate')
+  cli = concat_internals.common_cli(num_processes_choice = 'deprecate')
   args = cli.parse_args()
 
   build_source_path = concat_internals.get_source_path_builder(

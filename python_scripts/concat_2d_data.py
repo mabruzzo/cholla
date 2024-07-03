@@ -89,7 +89,7 @@ def concat_2d_dataset(output_directory: pathlib.Path,
   with h5py.File(source_fname_0, 'r') as source_file:
 
     # determine how many files data must be concatenated from
-    num_files = concat_internals.infer_numfiles_from_header(hdr)
+    num_files = concat_internals.infer_numfiles_from_header(source_file.attrs)
 
     if (num_processes is not None) and (num_processes != num_files):
       raise RuntimeError(
@@ -136,7 +136,7 @@ def concat_2d_dataset(output_directory: pathlib.Path,
   
 
   # Copy data
-  for rank in range(num_processes):
+  for rank in range(num_files):
     # Open source file
     source_file = h5py.File(build_source_path(proc_id = rank, nfile = output_number), 'r')
 
@@ -236,7 +236,7 @@ if __name__ == '__main__':
   from timeit import default_timer
   start = default_timer()
 
-  cli = concat_internals.common_cli(num_processes_choice == 'deprecate')
+  cli = concat_internals.common_cli(num_processes_choice = 'deprecate')
   cli.add_argument('-d', '--dataset-kind', type=str, required=True,    help='What kind of 2D dataset to concatnate. Options are "slice", "proj", and "rot_proj"')
   cli.add_argument('--disable-xy', default=True, action='store_false', help='Disables concating the XY datasets.')
   cli.add_argument('--disable-yz', default=True, action='store_false', help='Disables concating the YZ datasets.')

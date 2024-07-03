@@ -4,6 +4,8 @@ Contains all the common tools for the various concatnation functions/scipts
 """
 
 import h5py
+import numpy as np
+
 import argparse
 import functools
 import pathlib
@@ -139,7 +141,19 @@ def _integer_sequence(s: str):
 
 
 # ==============================================================================
-def add_common_cli_args(cli: argparse.ArgumentParser):
+def _add_snaps_arg(cli, required: bool = False):
+  cli.add_argument(
+    '--snaps', type=_integer_sequence, dest = "concat_outputs",
+    required = required,
+    metavar='(NUM | START:STOP[:STEP] | N1,N2,...)',
+    help = ('Specify output(s) to concatenate. Either a single number '
+            '(e.g. 8), a range (in python slice syntax), or a list (e.g. '
+            '1,2,3)')
+  )
+
+def add_common_cli_args(cli: argparse.ArgumentParser,
+                        num_processes_choice: str,
+                        add_concat_outputs_arg: bool = True):
   """Add common command-line arguments to an argparse.ArguementParser instance
   
   These arguments are shared among the various concatenation scripts.
@@ -151,8 +165,7 @@ def add_common_cli_args(cli: argparse.ArgumentParser):
   """
 
   # ============================================================================
-  def concat_output(raw_argument: str,
-                    num_processes_choice: str) -> list:
+  def concat_output(raw_argument: str,)-> list:
     """Function used to parse the `--concat-output` argument
     """
     warnings.warn(
@@ -238,26 +251,23 @@ def add_common_cli_args(cli: argparse.ArgumentParser):
   elif num_processes_choice == 'deprecate':
     cli.add_argument(
       '-n', '--num-processes', type=positive_int, required=False,
-      default = None
+      default = None,
       help='DEPRECATED: The number of processes that were used while running Cholla.')
   elif num_processes_choice != 'omit':
     raise ValueError('invalid value passed for num_processes_choice')
 
-  # Required Arguments
+  if add_concat_outputs_arg:
+    grp = cli.add_mutually_exclusive_group(required=True)
+    grp.add_argument(
+      '-c', '--concat-outputs',   type=concat_output,
+      help = 'DEPRECATED (use --snaps instead) Specify outputs to concatenate. Can be a single number (e.g. 8), an inclusive range (e.g. 2-9), or a list (e.g. [1,2,3]).')
+    _add_snaps_arg(grp, required = False)
+  else:
+    _add_snaps_arg(cli, required = True)
+
+  # Other Required Arguments
   cli.add_argument('-s', '--source-directory', type=pathlib.Path,  required=True, help='The path to the directory for the source HDF5 files.')
   cli.add_argument('-o', '--output-directory', type=pathlib.Path,  required=True, help='The path to the directory to write out the concatenated HDF5 files.') 
-
-  grp = cli.add_mutually_exclusive_group(required=True)
-  grp.add_argument(
-    '-c', '--concat-outputs',   type=concat_output,
-    help = 'DEPRECATED (use --snaps instead) Specify outputs to concatenate. Can be a single number (e.g. 8), an inclusive range (e.g. 2-9), or a list (e.g. [1,2,3]).')
-  grp.add_argument(
-    '--snaps', type=_integer_sequence, dest = "concat_outputs",
-    metavar='(NUM | START:STOP[:STEP] | N1,N2,...)',
-    help = ('Specify output(s) to concatenate. Either a single number '
-            '(e.g. 8), a range (in python slice syntax), or a list (e.g. '
-            '1,2,3)')
-  )
     
 
   # Optional Arguments
@@ -286,7 +296,8 @@ def common_cli(num_processes_choice = 'use') -> argparse.ArgumentParser:
   """
   # Initialize the CLI
   cli = argparse.ArgumentParser()
-  add_common_cli_args(cli, num_processes_choice = num_processes_choice)
+  add_common_cli_args(cli, num_processes_choice = num_processes_choice,
+                      add_concat_outputs_arg = True)
   return cli
 
 # ==============================================================================
