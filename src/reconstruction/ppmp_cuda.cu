@@ -83,7 +83,7 @@ __global__ void PPMP_cuda(Real *dev_conserved, Real *dev_bounds_L, Real *dev_bou
 
   #ifdef DE
   Real ge_i, ge_imo, ge_ipo, ge_imt, ge_ipt, ge_L, ge_R, E_kin, E, dge;
-  //  #ifndef VL
+    //  #ifndef VL
     #ifdef CTU
   Real del_ge, ge_6, geL_0, geR_0;
     #endif  // CTU
@@ -92,7 +92,7 @@ __global__ void PPMP_cuda(Real *dev_conserved, Real *dev_bounds_L, Real *dev_bou
   #ifdef SCALAR
   Real scalar_i[NSCALARS], scalar_imo[NSCALARS], scalar_ipo[NSCALARS], scalar_imt[NSCALARS], scalar_ipt[NSCALARS];
   Real scalar_L[NSCALARS], scalar_R[NSCALARS];
-  //  #ifndef VL
+    //  #ifndef VL
     #ifdef CTU
   Real del_scalar[NSCALARS], scalar_6[NSCALARS], scalarL_0[NSCALARS], scalarR_0[NSCALARS];
     #endif  // CTU

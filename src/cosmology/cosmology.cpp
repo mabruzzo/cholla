@@ -58,9 +58,7 @@ void Cosmology::Initialize(struct Parameters *P, Grav3D &Grav, Particles3D &Part
   Real dt_physical;
 
   // Advance a_t_sec until it matches current_a, and integrate time
-  while (a_t_sec < current_a)
-  {
-
+  while (a_t_sec < current_a) {
     // Limit the scale a_t_sec factor to current_a
     if (a_t_sec + da_t_sec > current_a) {
       da_t_sec = current_a - a_t_sec;
