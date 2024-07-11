@@ -132,8 +132,8 @@ static constexpr int maxWarpsPerBlock = 1024 / WARPSIZE;
   #define hipLaunchKernelGGL(F, G, B, M, S, ...) F<<<G, B, M, S>>>(__VA_ARGS__)
   #define __shfl_down(...)                       __shfl_down_sync(0xFFFFFFFF, __VA_ARGS__)
 
-  // Used to Wrap template kernels with more than one parameter in this to avoid errors. This is present in the HIP
-  // runtime but not the CUDA runtime
+// Used to Wrap template kernels with more than one parameter in this to avoid errors. This is present in the HIP
+// runtime but not the CUDA runtime
   #define HIP_KERNEL_NAME(...)                   __VA_ARGS__
 #endif  // O_HIP
 
