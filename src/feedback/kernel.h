@@ -16,6 +16,13 @@
 
 #include <type_traits>
 
+// uncomment the following line for debugging
+//#define FEEDBACK_LOG_INDIVIDUAL 1
+
+#ifndef FEEDBACK_LOG_INDIVIDUAL
+#define FEEDBACK_LOG_INDIVIDUAL 0
+#endif
+
 #define TPB_FEEDBACK 128
 
 
@@ -507,20 +514,28 @@ __global__ void Cluster_Feedback_Kernel(const feedback_details::ParticleProps pa
                                                                  spatial_props.nx_g, spatial_props.ny_g);
 
         if (is_scheduled) {
-          //kernel_printf("(block=%d, thread=%d)handling feedback for particle with: \n"
-          //              "    index: %d, id: %lld\n"
-          //              "    position (code units): %g, %g, %g\n"
-          //              "    position (index-units): %g, %g, %g\n"
-          //              "    vel (code-units): %g, %g, %g\n",
-          //              blockIdx.x, threadIdx.x, i, (long long int)(particle_props.id_dev[i]),
-          //              particle_props.pos_x_dev[i], particle_props.pos_y_dev[i], particle_props.pos_z_dev[i],
-          //              pos_indU[0], pos_indU[1], pos_indU[2],
-          //              particle_props.vel_x_dev[i], particle_props.vel_y_dev[i], particle_props.vel_z_dev[i]);
           // note age_dev is actually the time of birth
           const Real age = cycle_props.t - particle_props.age_dev[i];
 
           // holds a reference to the particle's mass (this will be updated after feedback is handled)
           Real& mass_ref = particle_props.mass_dev[i];
+
+#if FEEDBACK_LOG_INDIVIDUAL
+          // explicitly use json formatting to make log-parsing easier:
+          kernel_printf("...feedback-log-individual:\n"
+                        "   {\"block\": %d, \"thread\":%d, \"cycle\":%d,\n"
+                        "    \"index\": %d, \"id\": %lld, \"age\": %g,\n"
+                        "    \"mass (pre-feedback)\": %g, num_SN: %d\n"
+                        "    \"position (code units)\": [%g, %g, %g],\n"
+                        "    \"position (index-units)\": [%g, %g, %g],\n"
+                        "    \"vel (code-units)\": [%g, %g, %g]}\n",
+                        blockIdx.x, threadIdx.x, cycle_props.n_step,
+                        i, (long long int)(particle_props.id_dev[i]), age, mass_ref, num_SN_dev[i],
+                        particle_props.pos_x_dev[i], particle_props.pos_y_dev[i], particle_props.pos_z_dev[i],
+                        pos_indU[0], pos_indU[1], pos_indU[2],
+                        particle_props.vel_x_dev[i], particle_props.vel_y_dev[i], particle_props.vel_z_dev[i]);
+          int pre_countResolved = s_info[feedinfoLUT::countResolved];
+#endif /* FEEDBACK_LOG_INDIVIDUAL */
 
           fb_model.apply_feedback(pos_indU[0], pos_indU[1], pos_indU[2], particle_props.vel_x_dev[i],
                                   particle_props.vel_y_dev[i], particle_props.vel_z_dev[i],
@@ -528,6 +543,14 @@ __global__ void Cluster_Feedback_Kernel(const feedback_details::ParticleProps pa
                                   spatial_props.dx, spatial_props.dy, spatial_props.dz, 
                                   spatial_props.nx_g, spatial_props.ny_g, spatial_props.nz_g,
                                   spatial_props.n_ghost, num_SN_dev[i], s_info, conserved_dev);
+
+#if FEEDBACK_LOG_INDIVIDUAL
+          // explicitly use json formatting to make log-parsing easier:
+          kernel_printf("...feedback-log-individual-extra: {\"block\": %d, \"thread\":%d, \"cycle\":%d, \"id\": %lld, \"isResolved\": %d}\n",
+                        blockIdx.x, threadIdx.x, cycle_props.n_step,
+                        (long long int)(particle_props.id_dev[i]),
+                        int(s_info[feedinfoLUT::countResolved] > pre_countResolved));
+#endif
         }
       }
     }
