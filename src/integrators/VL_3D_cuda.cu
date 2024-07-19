@@ -373,6 +373,11 @@ void VL_Algorithm_3D_CUDA(Real *d_conserved, Real *d_grav_potential, int nx, int
                      dt, gama, n_fields, custom_grav, density_floor, dev_grav_potential);
   GPU_Error_Check();
 
+  // Step 6b: Address any crashed threads
+  hipLaunchKernelGGL(PostUpdate_Conserved_Correct_Crashed_3D, update_full_launch_params.get_numBlocks(),
+                     update_full_launch_params.get_threadsPerBlock(), 0, 0, dev_conserved, nx, ny, nz, x_off, y_off, z_off, 
+                     n_ghost, gama, n_fields);
+
   #ifdef MHD
   // Update the magnetic fields
   hipLaunchKernelGGL(mhd::Update_Magnetic_Field_3D, update_magnetic_launch_params.get_numBlocks(),

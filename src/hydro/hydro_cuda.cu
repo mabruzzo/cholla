@@ -377,13 +377,29 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
         0.5 * dt * (gx * (d * vx + d_n * vx_n) + gy * (d * vy + d_n * vy_n) + gz * (d * vz + d_n * vz_n));
 
 #endif  // GRAVITY
+  }
+}
+
+__global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off, int y_off, int z_off, 
+                                                        int n_ghost, Real gamma, int n_fields)
+{
+  int n_cells    = nx * ny * nz;
+
+  // get a global thread ID
+  int id  = threadIdx.x + blockIdx.x * blockDim.x;
+  int zid = id / (nx * ny);
+  int yid = (id - zid * nx * ny) / nx;
+  int xid = id - zid * nx * ny - yid * nx;
+
+  if (xid > n_ghost - 1 && xid < nx - n_ghost && yid > n_ghost - 1 && yid < ny - n_ghost && zid > n_ghost - 1 &&
+      zid < nz - n_ghost) {
 
 #if !(defined(DENSITY_FLOOR) && defined(TEMPERATURE_FLOOR))
+  // threads corresponding to real cells do the calculation
     if (dev_conserved[id] < 0.0 || dev_conserved[id] != dev_conserved[id] || dev_conserved[4 * n_cells + id] < 0.0 ||
         dev_conserved[4 * n_cells + id] != dev_conserved[4 * n_cells + id]) {
-      printf("%3d %3d %3d Thread crashed in final update. %e %e %e %e %e\n", xid + x_off, yid + y_off, zid + z_off,
-             dev_conserved[id], dtodx * (dev_F_x[imo] - dev_F_x[id]), dtody * (dev_F_y[jmo] - dev_F_y[id]),
-             dtodz * (dev_F_z[kmo] - dev_F_z[id]), dev_conserved[4 * n_cells + id]);
+      printf("%3d %3d %3d Thread crashed in final update. %e - - - %e\n", xid + x_off, yid + y_off, zid + z_off,
+             dev_conserved[id], dev_conserved[4 * n_cells + id]);
       Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved);
     }
 #endif  // DENSITY_FLOOR
@@ -400,7 +416,6 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
     */
   }
 }
-
 __device__ __host__ Real hydroInverseCrossingTime(Real const &E, Real const &d, Real const &d_inv, Real const &vx,
                                                   Real const &vy, Real const &vz, Real const &dx, Real const &dy,
                                                   Real const &dz, Real const &gamma)
