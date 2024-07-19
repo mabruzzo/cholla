@@ -9,6 +9,7 @@
 #include "../global/global.h"
 #include "../grid/grid3D.h"
 #include "../grid/grid_enum.h"    // provides grid_enum
+#include "../hydro/average_cells.h"  // provides Average_Slow_Cells and SlowCellConditionChecker
 #include "../hydro/hydro_cuda.h"  // provides Calc_dt_GPU
 #include "../integrators/VL_1D_cuda.h"
 #include "../integrators/VL_2D_cuda.h"
@@ -152,7 +153,9 @@ void Grid3D::Initialize(struct Parameters *P)
 
 #ifdef AVERAGE_SLOW_CELLS
   H.min_dt_slow = 1e-100;  // Initialize the minumum dt to a tiny number
-#endif                     // AVERAGE_SLOW_CELLS
+#else
+  H.min_dt_slow = -1.0;
+#endif  // AVERAGE_SLOW_CELLS
 
 #ifndef MPI_CHOLLA
 
@@ -578,7 +581,8 @@ Real Grid3D::Update_Hydro_Grid()
   ny_off = ny_local_start;
   nz_off = nz_local_start;
   #endif
-  Average_Slow_Cells(C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dx, H.dy, H.dz, gama, max_dti_slow, H.xbound,
+  Average_Slow_Cells(C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, gama,
+                     SlowCellConditionChecker(max_dti_slow,H.dx, H.dy, H.dz), H.xbound,
                      H.ybound, H.zbound, nx_off, ny_off, nz_off);
 #endif  // AVERAGE_SLOW_CELLS
 

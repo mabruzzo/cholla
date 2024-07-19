@@ -10,6 +10,7 @@
 #include "../global/global.h"
 #include "../global/global_cuda.h"
 #include "../gravity/static_grav.h"
+#include "../hydro/average_cells.h"
 #include "../hydro/hydro_cuda.h"
 #include "../utils/DeviceVector.h"
 #include "../utils/cuda_utilities.h"
@@ -684,9 +685,9 @@ void Temperature_Ceiling(Real *dev_conserved, int nx, int ny, int nz, int n_ghos
 
 #ifdef AVERAGE_SLOW_CELLS
 
-void Average_Slow_Cells(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dx, Real dy,
-                        Real dz, Real gamma, Real max_dti_slow, Real xbound, Real ybound, Real zbound, int nx_offset,
-                        int ny_offset, int nz_offset)
+void Average_Slow_Cells(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields,
+                        Real gamma, SlowCellConditionChecker slow_check,
+                        Real xbound, Real ybound, Real zbound, int nx_offset, int ny_offset, int nz_offset)
 {
   // set values for GPU kernels
   int n_cells = nx * ny * nz;
@@ -698,12 +699,12 @@ void Average_Slow_Cells(Real *dev_conserved, int nx, int ny, int nz, int n_ghost
 
   if (nx > 1 && ny > 1 && nz > 1) {  // 3D
     hipLaunchKernelGGL(Average_Slow_Cells_3D, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz, n_ghost, n_fields,
-                       dx, dy, dz, gamma, max_dti_slow, xbound, ybound, zbound, nx_offset, ny_offset, nz_offset);
+                       gamma, slow_check, xbound, ybound, zbound, nx_offset, ny_offset, nz_offset);
   }
 }
 
-__global__ void Average_Slow_Cells_3D(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dx,
-                                      Real dy, Real dz, Real gamma, Real max_dti_slow, Real xbound, Real ybound,
+__global__ void Average_Slow_Cells_3D(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields,
+                                      Real gamma, SlowCellConditionChecker slow_check, Real xbound, Real ybound,
                                       Real zbound, int nx_offset, int ny_offset, int nz_offset)
 {
   int id, xid, yid, zid, n_cells;
@@ -726,22 +727,23 @@ __global__ void Average_Slow_Cells_3D(Real *dev_conserved, int nx, int ny, int n
     vz    = dev_conserved[3 * n_cells + id] * d_inv;
     E     = dev_conserved[4 * n_cells + id];
 
-    // Compute the maximum inverse crossing time in the cell
-    max_dti = hydroInverseCrossingTime(E, d, d_inv, vx, vy, vz, dx, dy, dz, gamma);
+    // retrieve the max inverse crossing time in the cell if the cell meets the threshold for being a slow-cell.
+    // (if the cell doesn't meet the threshold, a negative value is returned instead)
+    max_dti = slow_check.max_dti_if_slow(E, d, d_inv, vx, vy, vz, gamma);
 
-    if (max_dti > max_dti_slow) {
+    if (max_dti >= 0) {
       speed  = sqrt(vx * vx + vy * vy + vz * vz);
       temp   = (gamma - 1) * (E - 0.5 * (speed * speed) * d) * ENERGY_UNIT / (d * DENSITY_UNIT / 0.6 / MP) / KB;
       P      = (E - 0.5 * d * (vx * vx + vy * vy + vz * vz)) * (gamma - 1.0);
       cs     = sqrt(d_inv * gamma * P) * VELOCITY_UNIT * 1e-5;
-      Real x = xbound + (nx_offset + xid - n_ghost + 0.5) * dx;
-      Real y = ybound + (ny_offset + yid - n_ghost + 0.5) * dy;
-      Real z = zbound + (nz_offset + zid - n_ghost + 0.5) * dz;
+      Real x = xbound + (nx_offset + xid - n_ghost + 0.5) * slow_check.dx;
+      Real y = ybound + (ny_offset + yid - n_ghost + 0.5) * slow_check.dy;
+      Real z = zbound + (nz_offset + zid - n_ghost + 0.5) * slow_check.dz;
       // Average this cell
       kernel_printf(
           " Average Slow Cell [ %.5e %.5e %.5e ] -> dt_cell=%f    dt_min=%f, n=%.3e, "
           "T=%.3e, v=%.3e (%.3e, %.3e, %.3e), cs=%.3e\n",
-          x, y, z, 1. / max_dti, 1. / max_dti_slow, dev_conserved[id] * DENSITY_UNIT / 0.6 / MP, temp,
+          x, y, z, 1. / max_dti, 1. / slow_check.max_dti_slow, dev_conserved[id] * DENSITY_UNIT / 0.6 / MP, temp,
           speed * VELOCITY_UNIT * 1e-5, vx * VELOCITY_UNIT * 1e-5, vy * VELOCITY_UNIT * 1e-5, vz * VELOCITY_UNIT * 1e-5,
           cs);
       Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, 0);
