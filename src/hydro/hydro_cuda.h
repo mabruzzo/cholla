@@ -113,6 +113,35 @@ __global__ void Select_Internal_Energy_2D(Real *dev_conserved, int nx, int ny, i
 
 __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields);
 
+/*! \brief Overwrites the values in the specified cell with the average of all the values from the (up to) 26
+ *  neighboring cells.
+ *
+ *  Care is taken when applying this logic to a cell near the edge of a block (where the entire simulation domain
+ *  is decomposed into 1 or more blocks).
+ *    * Recall that the entire reason we have ghost zones is that the stencil for computing flux-divergence can't
+ *      be applied uniformly to all cells -- the cells in the ghost zone can't be properly updated with the rest
+ *      the local block when applying the flux-divergence. We might refer to these cells that aren't properly
+ *      updated as being "stale". We refer to the width of the outer ring of stale values as the ``stale-depth``
+ *    * For concreteness, consider a pure hydro/mhd simulation using the VL integrator:
+ *       - Right after refreshing the ghost-zones, the stale_depth is 0
+ *       - After the partial time-step, the stale_depth is 1.
+ *       - After the full timestep, the stale depth depends on the choice of reconstruction. (e.g. it is 2 for
+ *         for nearest neighbor and 3 for plmp).
+ *       - The ghost-depth should always be equal to the max stale-depth at the end of a simulation cycle (if
+ *         ghost-depth is bigger, extra work is done. If it's smaller, then your simulation is wrong)
+ *    * To respect the simulations boundaries, values in "stale" cells are excluded from the averages. If
+ *      stale-depth is 0, then values from beyond the edge of the simulation are excluded from averages
+ *
+ *  \note
+ *  From a perfectionist's perspective, one could argue that we really should increment the stale-depth whenever
+ *  we call this function (in other words, we should have an extra layer of ghost zones for each time we call
+ *  this function).
+ *    * rationale: if we don't, then the the number of neighbors considered results of the simulation can vary
+ *      based on how close a cell is to a block-edge (the number of cells varies from 7 to 26).
+ *    * more pragmatically: this probably doesn't matter a whole lot given that this piece of machinery is a
+ *      band-aid solution to begin with.
+ *    * Aside: a similar argument could be made for the energy-synchronization step of the dual-energy formalism.
+ */
 __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int nz, int ncells, int n_fields,
                                         Real gamma, Real *conserved, int stale_depth);
 
