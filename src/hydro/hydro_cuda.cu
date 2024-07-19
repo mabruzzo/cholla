@@ -400,7 +400,7 @@ __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int
         dev_conserved[4 * n_cells + id] != dev_conserved[4 * n_cells + id]) {
       printf("%3d %3d %3d Thread crashed in final update. %e - - - %e\n", xid + x_off, yid + y_off, zid + z_off,
              dev_conserved[id], dev_conserved[4 * n_cells + id]);
-      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved);
+      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, n_ghost);
     }
 #endif  // DENSITY_FLOOR
     /*
@@ -744,7 +744,7 @@ __global__ void Average_Slow_Cells_3D(Real *dev_conserved, int nx, int ny, int n
           x, y, z, 1. / max_dti, 1. / max_dti_slow, dev_conserved[id] * DENSITY_UNIT / 0.6 / MP, temp,
           speed * VELOCITY_UNIT * 1e-5, vx * VELOCITY_UNIT * 1e-5, vy * VELOCITY_UNIT * 1e-5, vz * VELOCITY_UNIT * 1e-5,
           cs);
-      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved);
+      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, 0);
     }
   }
 }
@@ -1268,7 +1268,7 @@ __device__ Real Average_Cell_Single_Field(int field_indx, int i, int j, int k, i
 }
 
 __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int nz, int ncells, int n_fields,
-                                        Real gamma, Real *conserved)
+                                        Real gamma, Real *conserved, int stale_depth)
 {
   int id = i + (j)*nx + (k)*nx * ny;
 
@@ -1296,6 +1296,13 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
   for (int kk = k - 1; kk <= k + 1; kk++) {
     for (int jj = j - 1; jj <= j + 1; jj++) {
       for (int ii = i - 1; ii <= i + 1; ii++) {
+
+        if (ii <= stale_depth - 1 || ii >= nx - stale_depth ||
+            jj <= stale_depth - 1 || jj >= ny - stale_depth ||
+            kk <= stale_depth - 1 || kk >= nz - stale_depth) {
+          continue;
+        }
+
         idn = ii + jj * nx + kk * nx * ny;
         d   = conserved[grid_enum::density * ncells + idn];
         mx  = conserved[grid_enum::momentum_x * ncells + idn];
