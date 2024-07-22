@@ -382,7 +382,7 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
 }
 
 __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off, int y_off, int z_off, 
-                                                        int n_ghost, Real gamma, int n_fields)
+                                                        int n_ghost, Real gamma, int n_fields, SlowCellConditionChecker slow_check)
 {
   int n_cells    = nx * ny * nz;
 
@@ -401,7 +401,7 @@ __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int
         dev_conserved[4 * n_cells + id] != dev_conserved[4 * n_cells + id]) {
       printf("%3d %3d %3d Thread crashed in final update. %e - - - %e\n", xid + x_off, yid + y_off, zid + z_off,
              dev_conserved[id], dev_conserved[4 * n_cells + id]);
-      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, n_ghost);
+      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, n_ghost, slow_check);
     }
 #endif  // DENSITY_FLOOR
     /*
@@ -683,6 +683,16 @@ void Temperature_Ceiling(Real *dev_conserved, int nx, int ny, int nz, int n_ghos
   }
 }
 
+__device__ Real SlowCellConditionChecker::max_dti_if_slow(Real E, Real d, Real d_inv, Real vx, Real vy, Real vz, Real gamma) const
+{
+#ifndef AVERAGE_SLOW_CELLS
+  return -1.0;
+#else
+  Real max_dti = hydroInverseCrossingTime(E, d, d_inv, vx, vy, vz, dx, dy, dz, gamma);
+  return (max_dti > max_dti_slow) ? max_dti : -1.0;
+#endif
+}
+
 #ifdef AVERAGE_SLOW_CELLS
 
 void Average_Slow_Cells(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields,
@@ -746,7 +756,7 @@ __global__ void Average_Slow_Cells_3D(Real *dev_conserved, int nx, int ny, int n
           x, y, z, 1. / max_dti, 1. / slow_check.max_dti_slow, dev_conserved[id] * DENSITY_UNIT / 0.6 / MP, temp,
           speed * VELOCITY_UNIT * 1e-5, vx * VELOCITY_UNIT * 1e-5, vy * VELOCITY_UNIT * 1e-5, vz * VELOCITY_UNIT * 1e-5,
           cs);
-      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, 0);
+      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, 0, slow_check);
     }
   }
 }
@@ -1270,7 +1280,8 @@ __device__ Real Average_Cell_Single_Field(int field_indx, int i, int j, int k, i
 }
 
 __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int nz, int ncells, int n_fields,
-                                        Real gamma, Real *conserved, int stale_depth)
+                                        Real gamma, Real *conserved, int stale_depth,
+                                        SlowCellConditionChecker slow_check)
 {
   int id = i + (j)*nx + (k)*nx * ny;
 
@@ -1310,13 +1321,15 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
         mx  = conserved[grid_enum::momentum_x * ncells + idn];
         my  = conserved[grid_enum::momentum_y * ncells + idn];
         mz  = conserved[grid_enum::momentum_z * ncells + idn];
-        P   = (conserved[grid_enum::Energy * ncells + idn] - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
+        E   = conserved[grid_enum::Energy * ncells + idn];
+        P   = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
 #ifdef SCALAR
         for (int n = 0; n < NSCALARS; n++) {  // NOLINT
           scalar[n] = conserved[grid_enum::scalar * ncells + idn];
         }
 #endif
-        if (d > 0.0 && P > 0.0) {
+        Real d_inv = 1.0 / d;
+        if (d > 0.0 && P > 0.0 && not slow_check.is_slow(E, d, d_inv, mx * d_inv, my * d_inv, mz * d_inv, gamma)) {
           d_av += d;
           vx_av += mx;
           vy_av += my;

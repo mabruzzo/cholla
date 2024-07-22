@@ -5,6 +5,7 @@
 #define HYDRO_CUDA_H
 
 #include "../global/global.h"
+#include "../hydro/average_cells.h"
 #include "../utils/mhd_utilities.h"
 
 __global__ void Update_Conserved_Variables_1D(Real *dev_conserved, Real *dev_F, int n_cells, int x_off, int n_ghost,
@@ -22,7 +23,7 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
                                               Real *dev_potential);
 
 __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off, int y_off, int z_off, 
-                                                        int n_ghost, Real gamma, int n_fields);
+                                                        int n_ghost, Real gamma, int n_fields, SlowCellConditionChecker slow_check);
 
 /*!
  * \brief Determine the maximum inverse crossing time in a specific cell
@@ -143,7 +144,8 @@ __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, i
  *    * Aside: a similar argument could be made for the energy-synchronization step of the dual-energy formalism.
  */
 __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int nz, int ncells, int n_fields,
-                                        Real gamma, Real *conserved, int stale_depth);
+                                        Real gamma, Real *conserved, int stale_depth,
+                                        SlowCellConditionChecker slow_check);
 
 __device__ Real Average_Cell_Single_Field(int field_indx, int i, int j, int k, int nx, int ny, int nz, int ncells,
                                           Real *conserved);

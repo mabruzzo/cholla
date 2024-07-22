@@ -8,7 +8,6 @@
 #include <math.h>
 
 #include "../global/global.h"
-#include "hydro_cuda.h"
 
 /*! \brief Object that checks whether a given cell meets the conditions for slow-cell averaging.
 *          The main motivation for creating this class is reducing ifdef statements (and allow to modify the
@@ -20,6 +19,7 @@ struct SlowCellConditionChecker {
   Real max_dti_slow, dx, dy, dz;
   #endif
 
+  /*! \brief Construct a new object. */
   __host__ __device__ SlowCellConditionChecker(Real max_dti_slow, Real dx, Real dy, Real dz)
   #ifdef AVERAGE_SLOW_CELLS
     : max_dti_slow{max_dti_slow}, dx{dx}, dy{dy}, dz{dz}
@@ -28,8 +28,7 @@ struct SlowCellConditionChecker {
   }
 
   /*! \brief Returns whether the cell meets the condition for being considered a slow cell that must
-   *  be averaged.
-   */
+   *  be averaged. */
   template<bool verbose = false>
   __device__ bool is_slow(Real E, Real d, Real d_inv, Real vx, Real vy, Real vz, Real gamma) const
   {
@@ -39,18 +38,9 @@ struct SlowCellConditionChecker {
   /*! \brief Returns the max inverse timestep of the specified cell, if it meets the criteria for being
    *  a slow cell. If it doesn't, return a negative value instead.
    */
-  __device__ Real max_dti_if_slow(Real E, Real d, Real d_inv, Real vx, Real vy, Real vz, Real gamma) const
-  {
-  #ifndef AVERAGE_SLOW_CELLS
-    return -1.0;
-  #else
-    Real max_dti = hydroInverseCrossingTime(E, d, d_inv, vx, vy, vz, dx, dy, dz, gamma);
-    return (max_dti > max_dti_slow) ? max_dti : -1.0;
-  #endif
-  }
+  __device__ Real max_dti_if_slow(Real E, Real d, Real d_inv, Real vx, Real vy, Real vz, Real gamma) const;
 
 };
-
 
 #ifdef AVERAGE_SLOW_CELLS
 
