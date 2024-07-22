@@ -22,8 +22,9 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
                                               Real gamma, int n_fields, int custom_grav, Real density_floor,
                                               Real *dev_potential);
 
-__global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off, int y_off, int z_off, 
-                                                        int n_ghost, Real gamma, int n_fields, SlowCellConditionChecker slow_check);
+__global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off,
+                                                        int y_off, int z_off, int n_ghost, Real gamma, int n_fields,
+                                                        SlowCellConditionChecker slow_check);
 
 /*!
  * \brief Determine the maximum inverse crossing time in a specific cell
@@ -83,8 +84,6 @@ __global__ void Sync_Energies_3D(Real *dev_conserved, int nx, int ny, int nz, in
 void Temperature_Ceiling(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real gamma,
                          Real T_ceiling);
 #endif  // TEMPERATURE CEILING
-
-
 
 void Apply_Temperature_Floor(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real U_floor);
 

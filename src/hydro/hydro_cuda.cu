@@ -381,10 +381,11 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
   }
 }
 
-__global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off, int y_off, int z_off, 
-                                                        int n_ghost, Real gamma, int n_fields, SlowCellConditionChecker slow_check)
+__global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off,
+                                                        int y_off, int z_off, int n_ghost, Real gamma, int n_fields,
+                                                        SlowCellConditionChecker slow_check)
 {
-  int n_cells    = nx * ny * nz;
+  int n_cells = nx * ny * nz;
 
   // get a global thread ID
   int id  = threadIdx.x + blockIdx.x * blockDim.x;
@@ -394,9 +395,8 @@ __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int
 
   if (xid > n_ghost - 1 && xid < nx - n_ghost && yid > n_ghost - 1 && yid < ny - n_ghost && zid > n_ghost - 1 &&
       zid < nz - n_ghost) {
-
 #if !(defined(DENSITY_FLOOR) && defined(TEMPERATURE_FLOOR))
-  // threads corresponding to real cells do the calculation
+    // threads corresponding to real cells do the calculation
     if (dev_conserved[id] < 0.0 || dev_conserved[id] != dev_conserved[id] || dev_conserved[4 * n_cells + id] < 0.0 ||
         dev_conserved[4 * n_cells + id] != dev_conserved[4 * n_cells + id]) {
       printf("%3d %3d %3d Thread crashed in final update. %e - - - %e\n", xid + x_off, yid + y_off, zid + z_off,
@@ -683,7 +683,8 @@ void Temperature_Ceiling(Real *dev_conserved, int nx, int ny, int nz, int n_ghos
   }
 }
 
-__device__ Real SlowCellConditionChecker::max_dti_if_slow(Real E, Real d, Real d_inv, Real vx, Real vy, Real vz, Real gamma) const
+__device__ Real SlowCellConditionChecker::max_dti_if_slow(Real E, Real d, Real d_inv, Real vx, Real vy, Real vz,
+                                                          Real gamma) const
 {
 #ifndef AVERAGE_SLOW_CELLS
   return -1.0;
@@ -695,9 +696,9 @@ __device__ Real SlowCellConditionChecker::max_dti_if_slow(Real E, Real d, Real d
 
 #ifdef AVERAGE_SLOW_CELLS
 
-void Average_Slow_Cells(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields,
-                        Real gamma, SlowCellConditionChecker slow_check,
-                        Real xbound, Real ybound, Real zbound, int nx_offset, int ny_offset, int nz_offset)
+void Average_Slow_Cells(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real gamma,
+                        SlowCellConditionChecker slow_check, Real xbound, Real ybound, Real zbound, int nx_offset,
+                        int ny_offset, int nz_offset)
 {
   // set values for GPU kernels
   int n_cells = nx * ny * nz;
@@ -1309,9 +1310,7 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
   for (int kk = k - 1; kk <= k + 1; kk++) {
     for (int jj = j - 1; jj <= j + 1; jj++) {
       for (int ii = i - 1; ii <= i + 1; ii++) {
-
-        if (ii <= stale_depth - 1 || ii >= nx - stale_depth ||
-            jj <= stale_depth - 1 || jj >= ny - stale_depth ||
+        if (ii <= stale_depth - 1 || ii >= nx - stale_depth || jj <= stale_depth - 1 || jj >= ny - stale_depth ||
             kk <= stale_depth - 1 || kk >= nz - stale_depth) {
           continue;
         }

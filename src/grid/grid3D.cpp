@@ -8,9 +8,9 @@
 #endif
 #include "../global/global.h"
 #include "../grid/grid3D.h"
-#include "../grid/grid_enum.h"    // provides grid_enum
+#include "../grid/grid_enum.h"       // provides grid_enum
 #include "../hydro/average_cells.h"  // provides Average_Slow_Cells and SlowCellConditionChecker
-#include "../hydro/hydro_cuda.h"  // provides Calc_dt_GPU
+#include "../hydro/hydro_cuda.h"     // provides Calc_dt_GPU
 #include "../integrators/VL_1D_cuda.h"
 #include "../integrators/VL_2D_cuda.h"
 #include "../integrators/VL_3D_cuda.h"
@@ -449,7 +449,7 @@ void Grid3D::Execute_Hydro_Integrator(void)
 #ifdef VL
     VL_Algorithm_3D_CUDA(C.device, C.d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy,
                          H.dz, H.xbound, H.ybound, H.zbound, H.dt, H.n_fields, H.custom_grav, H.density_floor,
-                         C.Grav_potential, SlowCellConditionChecker(1.0 /H.min_dt_slow,H.dx, H.dy, H.dz));
+                         C.Grav_potential, SlowCellConditionChecker(1.0 / H.min_dt_slow, H.dx, H.dy, H.dz));
 #endif  // VL
 #ifdef SIMPLE
     Simple_Algorithm_3D_CUDA(C.device, C.d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy,
@@ -582,8 +582,8 @@ Real Grid3D::Update_Hydro_Grid()
   nz_off = nz_local_start;
   #endif
   Average_Slow_Cells(C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, gama,
-                     SlowCellConditionChecker(max_dti_slow,H.dx, H.dy, H.dz), H.xbound,
-                     H.ybound, H.zbound, nx_off, ny_off, nz_off);
+                     SlowCellConditionChecker(max_dti_slow, H.dx, H.dy, H.dz), H.xbound, H.ybound, H.zbound, nx_off,
+                     ny_off, nz_off);
 #endif  // AVERAGE_SLOW_CELLS
 
   // ==Calculate the next time step using Calc_dt_GPU from hydro/hydro_cuda.h==
