@@ -757,7 +757,7 @@ __global__ void Average_Slow_Cells_3D(Real *dev_conserved, int nx, int ny, int n
           x, y, z, 1. / max_dti, 1. / slow_check.max_dti_slow, dev_conserved[id] * DENSITY_UNIT / 0.6 / MP, temp,
           speed * VELOCITY_UNIT * 1e-5, vx * VELOCITY_UNIT * 1e-5, vy * VELOCITY_UNIT * 1e-5, vz * VELOCITY_UNIT * 1e-5,
           cs);
-      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, 0, slow_check);
+      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, n_ghost, slow_check);
     }
   }
 }
