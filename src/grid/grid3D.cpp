@@ -454,7 +454,7 @@ void Grid3D::Execute_Hydro_Integrator(void)
 #ifdef SIMPLE
     Simple_Algorithm_3D_CUDA(C.device, C.d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy,
                              H.dz, H.xbound, H.ybound, H.zbound, H.dt, H.n_fields, H.custom_grav, H.density_floor,
-                             C.Grav_potential, SlowCellConditionChecker(1.0 /H.min_dt_slow,H.dx, H.dy, H.dz));
+                             C.Grav_potential, SlowCellConditionChecker(1.0 / H.min_dt_slow, H.dx, H.dy, H.dz));
 #endif  // SIMPLE
   } else {
     chprintf("Error: Grid dimensions nx: %d  ny: %d  nz: %d  not supported.\n", H.nx, H.ny, H.nz);
