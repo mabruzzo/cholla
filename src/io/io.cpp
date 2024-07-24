@@ -89,8 +89,9 @@ void Write_Message_To_Log_File(const char *message)
 }
 
 /* Write Cholla Output Data */
-void Write_Data(Grid3D &G, struct Parameters P, int nfile)
+void Write_Data(Grid3D &G, struct Parameters P, const ParameterMap& pmap, int nfile)
 {
+  // we don't do anything with pmap yet
   cudaMemcpy(G.C.density, G.C.device, G.H.n_fields * G.H.n_cells * sizeof(Real), cudaMemcpyDeviceToHost);
 
   chprintf("\nSaving Snapshot: %d \n", nfile);
@@ -1117,6 +1118,72 @@ void Grid3D::Write_Grid_Binary(FILE *fp)
 }
 
 #ifdef HDF5
+
+/*! Writes a ParameterMap to a group within an hdf5 file called "parameters", which will be created by this function.
+ *
+ *  @return
+ *  This function simply returns true if everything went well or false if there was some kind of problem.
+ *
+ *  @note
+ *  While most functions of this style return a herr_t, it's pretty meaningless. In fact, returning an herr_t from
+ *  any function that involves multiple hdf5 calls will be meaningless, unless you also find a way to also encode
+ *  the exact context an error occured in within the return value. Until we come up with a more meaningful solution,
+ *  returning true or false provides just as much information.
+ */
+bool Write_HDF5_pmap(hid_t file_id, const ParameterMap& pmap) {
+  const char* grp_name = "parameters";
+  const hid_t grp_id = H5Gcreate2(file_id, grp_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (grp_id == H5I_INVALID_HID){
+    fprintf(stderr, "problem creating the \"%s\" group\n", grp_name);
+    return H5I_INVALID_HID;
+  }
+
+  // because the parameter file format doesn't have syntactic typing, the only robust choice for
+  // recording parameter values is to treat them all as strings.
+
+  // it's unfortunate that the following piece of code crops up in like 3 different places.
+  hid_t stringType = H5Tcopy(H5T_C_S1);
+  if (H5Tset_size(stringType, H5T_VARIABLE) < 0) {
+    H5Gclose (grp_id);  // close the group
+    return false;
+  }
+
+  // Create the data space for the attributes
+  hid_t dataspace_id = H5Screate(H5S_SCALAR);
+  if (dataspace_id == H5I_INVALID_HID) {
+    H5Gclose (grp_id);  // close the group
+    return false;
+  }
+
+  // create a variable to track whether any errors occured
+  bool any_err = false;
+
+  // define a lambda function that get's called for each parameter
+  auto serialize_param_fn = [=, &any_err](const std::string& param_name,
+                                          const std::string& param_val) -> void {
+    if (any_err) return; // if we already recorded an error, let's move on!
+
+    // create the attribute
+    hid_t attr_id = H5Acreate1(grp_id, param_name.c_str(), stringType, dataspace_id, H5P_DEFAULT);
+    if (attr_id == H5I_INVALID_HID) {
+      any_err = true;
+      return;
+    }
+
+    // write the attribute
+    herr_t status = H5Awrite(attr_id, stringType, param_val.c_str());
+    any_err = (status < 0);
+
+    // close the attribue
+    H5Aclose(attr_id);
+  };
+
+  pmap.for_each(serialize_param_fn);
+
+  H5Gclose (grp_id);  // close the group
+  return any_err;
+}
+
 herr_t Write_HDF5_Attribute(hid_t file_id, hid_t dataspace_id, double *attribute, const char *name)
 {
   hid_t attribute_id = H5Acreate(file_id, name, H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
