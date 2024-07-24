@@ -14,6 +14,7 @@
 #include "global/global.h"
 #include "grid/grid3D.h"
 #include "io/io.h"
+#include "io/ParameterMap.h"
 #include "utils/cuda_utilities.h"
 #include "utils/error_handling.h"
 #ifdef FEEDBACK
@@ -75,8 +76,11 @@ int main(int argc, char *argv[])
   // create the grid
   Grid3D G;
 
-  // read in the parameters
-  Parse_Params(param_file, &P, argc, argv);
+  // read in contents from the parameter file
+  ParameterMap pmap(param_file, argc, argv);
+
+  // use this parameter information to populate the Parameter object
+  Parse_Params(pmap, &P);
   // and output to screen
   chprintf("Git Commit Hash = %s\n", GIT_HASH);
   chprintf("Macro Flags     = %s\n", MACRO_FLAGS);

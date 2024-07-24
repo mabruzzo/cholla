@@ -362,9 +362,16 @@ struct Parameters {
 #endif
 };
 
-/*! \fn void parse_params(char *param_file, struct Parameters * parms);
- *  \brief Reads the parameters in the given file into a structure. */
-extern void Parse_Params(char *param_file, struct Parameters *parms, int argc, char **argv);
+class ParameterMap;
+
+/*! \brief Reads the from the ParameterMap into the primary Parameters structure.
+ *
+ *  \note
+ *  We opt to pass in an existing ParamterMap (by reference), rather than having this 
+ *  function return a ParameterMap, so that we can get away with simply forward-declaring
+ *  ParameterMap (rather than including the full definition)
+ */
+void Parse_Params(ParameterMap& pmap, struct Parameters *parms);
 
 /*! \fn int is_param_valid(char *name);
  * \brief Verifies that a param is valid (even if not needed).  Avoids
