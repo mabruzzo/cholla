@@ -12,10 +12,10 @@
 void Write_Data(Grid3D& G, struct Parameters P, const ParameterMap& pmap, int nfile);
 
 /* Output the grid data to file. */
-void Output_Data(Grid3D& G, struct Parameters P, int nfile);
+void Output_Data(Grid3D& G, struct Parameters P, const ParameterMap& pmap, int nfile);
 
 /* Output the grid data to file as 32-bit floats. */
-void Output_Float32(Grid3D& G, struct Parameters P, int nfile);
+void Output_Float32(Grid3D& G, struct Parameters P, const ParameterMap& pmap, int nfile);
 
 /* Output a projection of the grid data to file. */
 void Output_Projected_Data(Grid3D& G, struct Parameters P, int nfile);

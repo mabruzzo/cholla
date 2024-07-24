@@ -127,14 +127,14 @@ void Write_Data(Grid3D &G, struct Parameters P, const ParameterMap& pmap, int nf
 #ifndef ONLY_PARTICLES
   /*call the data output routine for Hydro data*/
   if (nfile % P.n_hydro == 0) {
-    Output_Data(G, P, nfile);
+    Output_Data(G, P, pmap, nfile);
   }
 #endif
 
 // This function does other checks to make sure it is valid (3D only)
 #ifdef HDF5
   if (P.n_out_float32 && nfile % P.n_out_float32 == 0) {
-    Output_Float32(G, P, nfile);
+    Output_Float32(G, P, pmap, nfile);
   }
 #endif
 
@@ -158,7 +158,7 @@ void Write_Data(Grid3D &G, struct Parameters P, const ParameterMap& pmap, int nf
 
 #ifdef PARTICLES
   if (nfile % P.n_particle == 0) {
-    G.WriteData_Particles(P, nfile);
+    G.OutputData_Particles(P, pmap, nfile);
   }
 #endif
 
@@ -196,7 +196,7 @@ void Write_Data(Grid3D &G, struct Parameters P, const ParameterMap& pmap, int nf
 }
 
 /* Output the grid data to file. */
-void Output_Data(Grid3D &G, struct Parameters P, int nfile)
+void Output_Data(Grid3D &G, struct Parameters P, const ParameterMap& pmap, int nfile)
 {
   // create the filename
   std::string filename = FnameTemplate(P).format_fname(nfile, "");
@@ -234,6 +234,9 @@ void Output_Data(Grid3D &G, struct Parameters P, int nfile)
   // Write the header (file attributes)
   G.Write_Header_HDF5(file_id);
 
+  // Record a copy of the parameter values
+  Write_HDF5_pmap(file_id, pmap);
+
   // write the conserved variables to the output file
   G.Write_Grid_HDF5(file_id);
 
@@ -265,7 +268,7 @@ void Output_Data(Grid3D &G, struct Parameters P, int nfile)
 #endif
 }
 
-void Output_Float32(Grid3D &G, struct Parameters P, int nfile)
+void Output_Float32(Grid3D &G, struct Parameters P, const ParameterMap& pmap, int nfile)
 {
 #ifdef HDF5
   Header H = G.H;
@@ -293,6 +296,9 @@ void Output_Float32(Grid3D &G, struct Parameters P, int nfile)
 
   // Write the header (file attributes)
   G.Write_Header_HDF5(file_id);
+
+  // Record a copy of the parameter values
+  Write_HDF5_pmap(file_id, pmap);
 
   // write the conserved variables to the output file
 
