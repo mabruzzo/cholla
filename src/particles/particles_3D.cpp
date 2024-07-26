@@ -29,11 +29,11 @@ void Grid3D::Initialize_Particles(struct Parameters *P)
 {
   chprintf("\nInitializing Particles...\n");
 
-#ifdef GRAVITY
+  #ifdef GRAVITY
   SpatialDomainProps spatial_props = SpatialDomainProps::From_Grav3D(Grav);
-#else
+  #else
   SpatialDomainProps spatial_props = SpatialDomainProps::From_Grid3D(*this, P);
-#endif
+  #endif
 
   Particles.Initialize(P, spatial_props, H.xbound, H.ybound, H.zbound, H.xdglobal, H.ydglobal, H.zdglobal);
 
@@ -53,8 +53,8 @@ void Grid3D::Initialize_Particles(struct Parameters *P)
   chprintf("Particles Initialized Successfully. \n\n");
 }
 
-void Particles3D::Initialize(struct Parameters *P, const SpatialDomainProps& spatial_props, Real xbound, Real ybound, Real zbound, Real xdglobal,
-                             Real ydglobal, Real zdglobal)
+void Particles3D::Initialize(struct Parameters *P, const SpatialDomainProps &spatial_props, Real xbound, Real ybound,
+                             Real zbound, Real xdglobal, Real ydglobal, Real zdglobal)
 {
   // Initialize local and total number of particles to 0
   n_local         = 0;
@@ -189,8 +189,8 @@ void Particles3D::Initialize(struct Parameters *P, const SpatialDomainProps& spa
     int n_ghost_pot = 0;
     #endif
 
-    G.n_cells_potential = (G.nx_local + 2 * n_ghost_pot) * (G.ny_local + 2 * n_ghost_pot) *
-                          (G.nz_local + 2 * n_ghost_pot);
+    G.n_cells_potential =
+        (G.nx_local + 2 * n_ghost_pot) * (G.ny_local + 2 * n_ghost_pot) * (G.nz_local + 2 * n_ghost_pot);
   }
 
     #ifdef SINGLE_PARTICLE_MASS

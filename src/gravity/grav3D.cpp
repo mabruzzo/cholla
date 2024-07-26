@@ -16,8 +16,8 @@
 
 Grav3D::Grav3D(void) {}
 
-void Grav3D::Initialize(const SpatialDomainProps& spatial_props, Real Lx, Real Ly, Real Lz,
-                        int n_ghost_pot_offset, Parameters *P)
+void Grav3D::Initialize(const SpatialDomainProps &spatial_props, Real Lx, Real Ly, Real Lz, int n_ghost_pot_offset,
+                        Parameters *P)
 {
   // Set Box Size
   Lbox_x = Lx;

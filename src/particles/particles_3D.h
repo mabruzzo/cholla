@@ -17,7 +17,7 @@
     #include "../grid/spatial_domain_props.h"
 
     #ifdef PARTICLES_GPU
-      #include "../utils/gpu.hpp" // cudaFree
+      #include "../utils/gpu.hpp"  // cudaFree
 
       #define TPB_PARTICLES 1024
       // #define PRINT_GPU_MEMORY
@@ -221,8 +221,8 @@ class Particles3D
 
   Particles3D(void);
 
-  void Initialize(struct Parameters *P, const SpatialDomainProps& spatial_props, Real xbound, Real ybound, Real zbound, Real xdglobal,
-                  Real ydglobal, Real zdglobal);
+  void Initialize(struct Parameters *P, const SpatialDomainProps &spatial_props, Real xbound, Real ybound, Real zbound,
+                  Real xdglobal, Real ydglobal, Real zdglobal);
 
   void Allocate_Particles_Grid_Field_Real(Real **array_dev, int size);
   void Free_GPU_Array_Real(Real *array);

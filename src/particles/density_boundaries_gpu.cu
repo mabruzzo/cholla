@@ -69,9 +69,9 @@ __global__ void Set_Particles_Density_Boundaries_Periodic_kernel(int direction, 
 
 void Grid3D::Set_Particles_Density_Boundaries_Periodic_GPU(int direction, int side)
 {
-    #ifndef GRAVITY_GPU
+  #ifndef GRAVITY_GPU
   CHOLLA_ERROR("This function should not be invoked when compiled without GPU-Gravity");
-    #endif GRAVITY_GPU
+  #endif GRAVITY_GPU
   int n_ghost, nx_g, ny_g, nz_g, size, ngrid, n_i, n_j;
   n_ghost = Particles.G.n_ghost_particles_grid;
   nx_g    = Particles.G.nx_local + 2 * n_ghost;
