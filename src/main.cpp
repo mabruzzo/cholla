@@ -17,6 +17,7 @@
 #include "io/ParameterMap.h"
 #include "utils/cuda_utilities.h"
 #include "utils/error_handling.h"
+#include "cooling/chemistry.h"
 #ifdef FEEDBACK
   #include "feedback/feedback.h"
   #ifdef ANALYSIS
@@ -152,6 +153,10 @@ int main(int argc, char *argv[])
   G.Initialize_Cosmology(&P);
 #endif
 
+// in the future, we plan to consolidate COOLING_GRACKLE and CHEMISTRY_GPU
+// within chemistry_callback
+std::function<void(Grid3D&)> chemistry_callback = configure_chemistry_callback(pmap);
+
 #ifdef COOLING_GRACKLE
   G.Initialize_Grackle(&P);
 #endif
@@ -277,7 +282,7 @@ int main(int argc, char *argv[])
 #endif
 
     // Advance the grid by one timestep
-    dti = G.Update_Hydro_Grid();
+    dti = G.Update_Hydro_Grid(chemistry_callback);
 
     // update the simulation time ( t += dt )
     G.Update_Time();

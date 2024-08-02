@@ -463,9 +463,7 @@ void Grid3D::Execute_Hydro_Integrator(void)
 #endif  // CPU_TIME
 }
 
-/*! \fn void Update_Hydro_Grid(void)
- *  \brief Do all steps to update the hydro. */
-Real Grid3D::Update_Hydro_Grid()
+Real Grid3D::Update_Hydro_Grid(std::function<void(Grid3D&)>& chemistry_callback)
 {
 #ifdef ONLY_PARTICLES
   // Don't integrate the Hydro when only solving for particles
@@ -503,17 +501,22 @@ Real Grid3D::Update_Hydro_Grid()
 #endif  // SCALAR_FLOOR
 
 // == Perform chemistry/cooling (there are a few different cases) ==
-#ifdef COOLING_GPU
-  #ifdef CPU_TIME
-  Timer.Cooling_GPU.Start();
-  #endif
-  // ==Apply Cooling from cooling/cooling_cuda.h==
-  Cooling_Update(C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama);
-  #ifdef CPU_TIME
-  Timer.Cooling_GPU.End();
-  #endif
 
-#endif  // COOLING_GPU
+if (chemistry_callback) {
+#if defined(CHEMISTRY_GPU) || defined(COOLING_GRACKLE)
+  CHOLLA_ERROR("sanity check failed: currently it is an error to use the chemistry_callback "
+               "when chemistry (on GPU/via Grackle) is enabled. Currently, chemistry_callback"
+               "only supports tabulated heating/cooling curves of this in the future.");
+#endif // defined(CHEMISTRY_GPU) || defined(COOLING_GRACKLE) 
+#ifdef CPU_TIME
+  Timer.Cooling_GPU.Start();
+#endif
+  // ==Apply Cooling from cooling/chemistry.h==
+  chemistry_callback(*this);
+#ifdef CPU_TIME
+  Timer.Cooling_GPU.End();
+#endif
+}
 
 #ifdef DUST
   // ==Apply dust from dust/dust_cuda.h==
