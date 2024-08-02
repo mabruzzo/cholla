@@ -6,16 +6,26 @@
 #include "../cooling/cooling_cuda.h"  // provides Cooling_Update
 #include "../cooling/load_cloudy_texture.h"  // provides Load_Cuda_Textures and Free_Cuda_Textures
 
+static bool allocated_textures = false;
+
 class TabulatedCoolingFunctor{
   bool cloudy_;
 public:
   TabulatedCoolingFunctor(bool cloudy)
     : cloudy_(cloudy)
   {
-    if (cloudy_) Load_Cuda_Textures();
+    if (cloudy_ and not allocated_textures){
+      Load_Cuda_Textures();
+      allocated_textures = true;
+    } 
   }
 
-  ~TabulatedCoolingFunctor() { if (cloudy_) Free_Cuda_Textures(); }
+  ~TabulatedCoolingFunctor()
+  {
+    // in princple, if this class actually owned the pointers to the textures, we would invoke
+    // the following snippet. But, since it is actually a global variable, we don't do anything
+    /* if (cloudy_) Free_Cuda_Textures(); */
+  }
 
   void operator()(Grid3D& grid) {
     Header& H = grid.H;
@@ -55,11 +65,9 @@ std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap) {
   if (chemistry_kind == "none") {
     return {};
   } else if (chemistry_kind == "tabulated-cloudy"){
-    CHOLLA_ASSERT(chemistry_kind == default_kind, "NOT IMPLEMENTED YET");
     TabulatedCoolingFunctor fn(true);
     return {fn};
   } else if (chemistry_kind == "piecewise-cie"){
-    CHOLLA_ASSERT(chemistry_kind == default_kind, "NOT IMPLEMENTED YET");
     TabulatedCoolingFunctor fn(false);
     return {fn};
   } else if (chemistry_kind == "chemistry-gpu" or chemistry_kind == "grackle"){
