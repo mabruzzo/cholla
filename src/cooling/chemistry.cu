@@ -42,7 +42,7 @@ std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap) {
 
     auto fn = [](Grid3D& grid) -> void {
       Header& H = grid.H;
-      Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama);
+      Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama, true);
     };
     return {fn};
   } else if (chemistry_kind == "tabulated-cie"){
@@ -50,7 +50,7 @@ std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap) {
 
     auto fn = [](Grid3D& grid) -> void {
       Header& H = grid.H;
-      Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama);
+      Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama, false);
     };
     return {fn};
   } else if (chemistry_kind == "chemistry-gpu" or chemistry_kind == "grackle"){

@@ -1,34 +1,45 @@
 /*! \file cooling_cuda.cu
  *  \brief Functions to calculate cooling rate for a given rho, P, dt. */
 
-#ifdef COOLING_GPU
+#include <math.h>
 
-  #include <math.h>
+#include "../cooling/cooling_cuda.h"
+#include "../global/global.h"
+#include "../global/global_cuda.h"
+#include "../utils/gpu.hpp"
 
-  #include "../cooling/cooling_cuda.h"
-  #include "../global/global.h"
-  #include "../global/global_cuda.h"
-  #include "../utils/gpu.hpp"
-
-  #ifdef CLOUDY_COOL
-    #include "../cooling/texture_utilities.h"
-  #endif
+#include "../cooling/texture_utilities.h"
 
 cudaTextureObject_t coolTexObj = 0;
 cudaTextureObject_t heatTexObj = 0;
 
+template<bool cloudy>
+__global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
+                               Real gamma, cudaTextureObject_t coolTexObj, cudaTextureObject_t heatTexObj);
+
 __device__ Real Photoelectric_Heating(Real n, Real T, Real n_av);
 __device__ Real TI_cool(Real n, Real T);
 
-void Cooling_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt, Real gamma)
+template<bool cloudy>
+static void Cooling_Update_Helper_(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt, Real gamma)
 {
   int n_cells = nx * ny * nz;
   int ngrid   = (n_cells + TPB - 1) / TPB;
   dim3 dim1dGrid(ngrid, 1, 1);
   dim3 dim1dBlock(TPB, 1, 1);
-  hipLaunchKernelGGL(cooling_kernel, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz, n_ghost, n_fields, dt,
+  hipLaunchKernelGGL(cooling_kernel<cloudy>, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz, n_ghost, n_fields, dt,
                      gama, coolTexObj, heatTexObj);
   GPU_Error_Check();
+}
+
+void Cooling_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt, Real gamma,
+                    bool use_cloudy)
+{
+  if(use_cloudy){
+    Cooling_Update_Helper_<true>(dev_conserved, nx, ny, nz, n_ghost, n_fields, dt, gamma);
+  } else {
+    Cooling_Update_Helper_<false>(dev_conserved, nx, ny, nz, n_ghost, n_fields, dt, gamma);
+  }
 }
 
 /*! \fn void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int
@@ -37,6 +48,7 @@ void Cooling_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, in
  *  \brief When passed an array of conserved variables and a timestep, adjust
  the value of the total energy for each cell according to the specified cooling
  function. */
+template<bool cloudy>
 __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
                                Real gamma, cudaTextureObject_t coolTexObj, cudaTextureObject_t heatTexObj)
 {
@@ -67,9 +79,9 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
   // #ifndef DE
   Real vx, vy, vz, p;
   // #endif
-  #ifdef DE
+#ifdef DE
   Real ge;
-  #endif
+#endif
 
   mu = 0.6;
   // mu = 1.27;
@@ -97,28 +109,28 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
     p  = (E - 0.5 * d * (vx * vx + vy * vy + vz * vz)) * (gamma - 1.0);
     p  = fmax(p, (Real)TINY_NUMBER);
   // #endif
-  #ifdef DE
+#ifdef DE
     ge = dev_conserved[(n_fields - 1) * n_cells + id] / d;
     ge = fmax(ge, (Real)TINY_NUMBER);
-  #endif
+#endif
 
     // calculate the number density of the gas (in cgs)
     n = d * DENSITY_UNIT / (mu * MP);
 
     // calculate the temperature of the gas
     T_init = p * PRESSURE_UNIT / (n * KB);
-  #ifdef DE
+#ifdef DE
     T_init = d * ge * (gamma - 1.0) * PRESSURE_UNIT / (n * KB);
-  #endif
+#endif
 
     // calculate cooling rate per volume
     T = T_init;
-  // call the cooling function
-  #ifdef CLOUDY_COOL
-    cool = Cloudy_cool(n, T, coolTexObj, heatTexObj);
-  #else
-    cool = CIE_cool(n, T);
-  #endif
+    // call the cooling function
+    if constexpr (cloudy) {
+      cool = Cloudy_cool(n, T, coolTexObj, heatTexObj);
+    } else {
+      cool = CIE_cool(n, T);
+    }
 
     // calculate change in temperature given dt
     del_T = cool * dt * TIME_UNIT * (gamma - 1.0) / (n * KB);
@@ -131,12 +143,13 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
       T -= cool * dt_sub * TIME_UNIT * (gamma - 1.0) / (n * KB);
       // how much time is left from the original timestep?
       dt -= dt_sub;
-  // calculate cooling again
-  #ifdef CLOUDY_COOL
-      cool = Cloudy_cool(n, T, coolTexObj, heatTexObj);
-  #else
-      cool = CIE_cool(n, T);
-  #endif
+
+      // calculate cooling again
+      if constexpr (cloudy) {
+        cool = Cloudy_cool(n, T, coolTexObj, heatTexObj);
+      } else {
+        cool = CIE_cool(n, T);
+      }
       // calculate new change in temperature
 
       // at one point, the logic for the above ifdef was called the
@@ -158,23 +171,23 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
     // adjust value of energy based on total change in temperature
     del_T = T_init - T;  // total change in T
     E -= n * KB * del_T / ((gamma - 1.0) * ENERGY_UNIT);
-  #ifdef DE
+#ifdef DE
     ge -= KB * del_T / (mu * MP * (gamma - 1.0) * SP_ENERGY_UNIT);
-  #endif
+#endif
 
   // calculate cooling rate for new T
-  #ifdef CLOUDY_COOL
+  if constexpr (cloudy) {
     cool = Cloudy_cool(n, T, coolTexObj, heatTexObj);
-  #else
+  } else {
     cool = CIE_cool(n, T);
-  // printf("%d %d %d %e %e %e\n", xid, yid, zid, n, T, cool);
-  #endif
+    // printf("%d %d %d %e %e %e\n", xid, yid, zid, n, T, cool);
+  }
 
     // and send back from kernel
     dev_conserved[4 * n_cells + id] = E;
-  #ifdef DE
+#ifdef DE
     dev_conserved[(n_fields - 1) * n_cells + id] = d * ge;
-  #endif
+#endif
   }
 }
 
@@ -330,7 +343,6 @@ __device__ Real CIE_cool(Real n, Real T)
   return cool;
 }
 
-  #ifdef CLOUDY_COOL
 /* \fn __device__ Real Cloudy_cool(Real n, Real T, cudaTextureObject_t
  coolTexObj, cudaTextureObject_t heatTexObj)
  * \brief Uses texture mapping to interpolate Cloudy cooling/heating
@@ -373,7 +385,6 @@ __device__ Real Cloudy_cool(Real n, Real T, cudaTextureObject_t coolTexObj, cuda
   cooling = pow(10, lambda);
   return n * n * (cooling - heating);
 }
-  #endif  // CLOUDY_COOL
 
 __device__ Real Photoelectric_Heating(Real n, Real T, Real n_av)
 {
@@ -423,5 +434,3 @@ __device__ Real TI_cool(Real n, Real T)
   Real cooling = n * (n * lambda - H);
   return cooling;
 }
-
-#endif  // COOLING_GPU

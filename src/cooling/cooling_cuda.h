@@ -17,15 +17,14 @@ extern cudaTextureObject_t heatTexObj;
  *  \brief When passed an array of conserved variables and a timestep, adjust
  the value of the total energy for each cell according to the specified cooling
  function. */
-void Cooling_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt, Real gamma);
+void Cooling_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt, Real gamma,
+                    bool use_cloudy);
 
 /*! \fn void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int
  n_ghost, Real dt, Real gamma)
  *  \brief When passed an array of conserved variables and a timestep, adjust
  the value of the total energy for each cell according to the specified cooling
  function. */
-__global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
-                               Real gamma, cudaTextureObject_t coolTexObj, cudaTextureObject_t heatTexObj);
 
 /* \fn __device__ Real test_cool(Real n, Real T)
  * \brief Cooling function from Creasey 2011. */
