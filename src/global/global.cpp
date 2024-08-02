@@ -128,7 +128,9 @@ void Parse_Params(ParameterMap &pmap, struct Parameters *parms)
 
   // the plan is to eventually, use the new parsing functions from Parse_Param like the following
   Init_Param_Struct_Members(pmap, parms);
+}
 
+void Warn_Unused_Params(ParameterMap& pmap) {
   pmap.warn_unused_parameters(optionalParams);
 }
 

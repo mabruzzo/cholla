@@ -190,6 +190,11 @@ std::function<void(Grid3D&)> chemistry_callback = configure_chemistry_callback(p
   G.Setup_Analytic_Potential(&P);
 #endif
 
+// now that we are done with initializing various modules, let's check for unused parameters
+Warn_Unused_Params(pmap);
+
+// do work in anticipation of the first timestep
+
 #ifdef GRAVITY
   // Get the gravitational potential for the first timestep
   G.Compute_Gravitational_Potential(&P);

@@ -362,6 +362,9 @@ class ParameterMap;
  */
 void Parse_Params(ParameterMap& pmap, struct Parameters *parms);
 
+/*! \brief prints a warning if pmap contains any unused parameters */
+void Warn_Unused_Params(ParameterMap& pmap);
+
 /*! \fn int is_param_valid(char *name);
  * \brief Verifies that a param is valid (even if not needed).  Avoids
  * "warnings" in output. */
