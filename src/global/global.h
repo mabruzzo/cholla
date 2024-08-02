@@ -50,15 +50,6 @@ typedef double Real;
 
 #define LOG_FILE_NAME "run_output.log"
 
-// Conserved Floor Values
-#if (defined(FEEDBACK) || defined(STAR_FORMATION)) && defined(CLOUDY_COOL)
-  #define TEMP_FLOOR 1e1    // 10K for cloudy cooling
-  #define DENS_FLOOR 14.83  // 1e-6 cm^-3
-#else
-  #define TEMP_FLOOR 1e-3
-  #define DENS_FLOOR 1e-5  // in code units
-#endif
-
 // mean molecular weight
 #define MU 0.6
 // Parameters for Enzo dual Energy Condition
@@ -161,10 +152,8 @@ extern Real C_cfl;  // CFL number (0 - 0.5)
 extern Real t_comm;
 extern Real t_other;
 
-#ifdef COOLING_GPU
 extern float *cooling_table;
 extern float *heating_table;
-#endif
 
 /*! \fn void Set_Gammas(Real gamma_in)
  *  \brief Set gamma values for Riemann solver. */
