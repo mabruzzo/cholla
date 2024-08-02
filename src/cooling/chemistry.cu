@@ -3,9 +3,26 @@
 #include "chemistry.h"
 #include "../io/ParameterMap.h"
 #include "../grid/grid3D.h"
-#include "../cooling/cooling_cuda.h"
+#include "../cooling/cooling_cuda.h"  // provides Cooling_Update
+#include "../cooling/load_cloudy_texture.h"  // provides Load_Cuda_Textures and Free_Cuda_Textures
 
+class TabulatedCoolingFunctor{
+  bool cloudy_;
+public:
+  TabulatedCoolingFunctor(bool cloudy)
+    : cloudy_(cloudy)
+  {
+    if (cloudy_) Load_Cuda_Textures();
+  }
 
+  ~TabulatedCoolingFunctor() { if (cloudy_) Free_Cuda_Textures(); }
+
+  void operator()(Grid3D& grid) {
+    Header& H = grid.H;
+    Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama, this->cloudy_);
+  }
+
+};
 
 std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap) {
 
@@ -16,7 +33,7 @@ std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap) {
 #if defined(COOLING_GPU) && defined(CLOUDY_COOL)
   default_kind = "tabulated-cloudy";
 #elif defined(COOLING_GPU)
-  default_kind = "tabulated-cie";
+  default_kind = "piecewise-cie";
 #elif defined(CHEMISTRY_GPU)
   default_kind = "chemistry-gpu";
 #elif defined(COOLING_GRACKLE)
@@ -39,19 +56,11 @@ std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap) {
     return {};
   } else if (chemistry_kind == "tabulated-cloudy"){
     CHOLLA_ASSERT(chemistry_kind == default_kind, "NOT IMPLEMENTED YET");
-
-    auto fn = [](Grid3D& grid) -> void {
-      Header& H = grid.H;
-      Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama, true);
-    };
+    TabulatedCoolingFunctor fn(true);
     return {fn};
-  } else if (chemistry_kind == "tabulated-cie"){
+  } else if (chemistry_kind == "piecewise-cie"){
     CHOLLA_ASSERT(chemistry_kind == default_kind, "NOT IMPLEMENTED YET");
-
-    auto fn = [](Grid3D& grid) -> void {
-      Header& H = grid.H;
-      Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama, false);
-    };
+    TabulatedCoolingFunctor fn(false);
     return {fn};
   } else if (chemistry_kind == "chemistry-gpu" or chemistry_kind == "grackle"){
     CHOLLA_ERROR("chemistry.kind doesn't support %s yet (unless certain macros are defined)", chemistry_kind.c_str());

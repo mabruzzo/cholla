@@ -26,16 +26,9 @@
   #include "../mpi/mpi_routines.h"
 #endif
 #include <stdio.h>
-#ifdef CLOUDY_COOL
-  #include "../cooling/load_cloudy_texture.h"  // provides Load_Cuda_Textures and Free_Cuda_Textures
-#endif
 
 #ifdef PARALLEL_OMP
   #include "../utils/parallel_omp.h"
-#endif
-
-#ifdef COOLING_GPU
-  #include "../cooling/cooling_cuda.h"  // provides Cooling_Update
 #endif
 
 #ifdef DUST
@@ -357,9 +350,6 @@ void Grid3D::AllocateMemory(void)
     C.host[i] = 0.0;
   }
 
-#ifdef CLOUDY_COOL
-  Load_Cuda_Textures();
-#endif  // CLOUDY_COOL
 }
 
 /*! \fn void set_dt(Real dti)
@@ -678,12 +668,6 @@ void Grid3D::FreeMemory(void)
 
 #ifdef COOLING_GRACKLE
   Cool.Free_Memory();
-#endif
-
-#ifdef COOLING_GPU
-  #ifdef CLOUDY_COOL
-  Free_Cuda_Textures();
-  #endif
 #endif
 
 #ifdef CHEMISTRY_GPU
