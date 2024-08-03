@@ -424,6 +424,20 @@ __device__ Real Photoelectric_Heating(Real n, Real T, Real n_av)
   }
 }
 
+class CoolRecipeCloudyAndPhotoHeating
+{
+  CoolRecipeCloudy pure_cloudy_recipe;
+  Real n_av_cgs;
+
+ public:
+  __host__ CoolRecipeCloudyAndPhotoHeating(Real n_av_cgs) : n_av_cgs{n_av_cgs} {}
+
+  __device__ Real cool_rate(Real n, Real T)
+  {
+    return pure_cloudy_recipe.cool_rate(n, T) - Photoelectric_Heating(n, T, n_av_cgs);
+  }
+};
+
 /*! \brief Estimated cooling / photoelectric heating function based on description
  *         given in Kim et al. 2015.
  *  \note  According to Evan, this was implemented back while trying out the photo-heating term
@@ -463,10 +477,18 @@ __device__ Real TI_cool(Real n, Real T)
 
 std::function<void(Grid3D &)> configure_cooling_callback(std::string kind, ParameterMap &pmap)
 {
+  bool photoelectric_heating_flag_specified = pmap.has_param("chemistry.photoelectric_heating");
   if (kind == "tabulated-cloudy") {
-    CoolRecipeCloudy recipe;
-    CoolingUpdateExecutor<CoolRecipeCloudy> updater(recipe);
-    return {updater};
+    if (pmap.value_or("chemistry.photoelectric_heating", false)) {
+      // make 100.0 configurable!
+      CoolRecipeCloudyAndPhotoHeating recipe(100.0);
+      CoolingUpdateExecutor<CoolRecipeCloudyAndPhotoHeating> updater(recipe);
+      return {updater};
+    } else {
+      CoolRecipeCloudy recipe;
+      CoolingUpdateExecutor<CoolRecipeCloudy> updater(recipe);
+      return {updater};
+    }
   } else if (kind == "piecewise-cie") {
     CoolRecipeCIE recipe{};
     CoolingUpdateExecutor<CoolRecipeCIE> updater(recipe);
