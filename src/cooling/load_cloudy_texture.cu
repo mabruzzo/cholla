@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <vector>
 
 #include "../cooling/cooling_cuda.h"
 #include "../cooling/load_cloudy_texture.h"
@@ -21,11 +22,6 @@ void Test_Cloudy_Speed();
  * \brief Load the Cloudy cooling tables into host (CPU) memory. */
 void Host_Read_Cooling_Tables(float *cooling_table, float *heating_table)
 {
-  double *n_arr;
-  double *T_arr;
-  double *L_arr;
-  double *H_arr;
-
   int i;
   int nx = 121;
   int ny = 81;
@@ -35,10 +31,10 @@ void Host_Read_Cooling_Tables(float *cooling_table, float *heating_table)
   char *pch;
 
   // allocate arrays for temperature data
-  n_arr = (double *)malloc(nx * ny * sizeof(double));
-  T_arr = (double *)malloc(nx * ny * sizeof(double));
-  L_arr = (double *)malloc(nx * ny * sizeof(double));
-  H_arr = (double *)malloc(nx * ny * sizeof(double));
+  std::vector<double> n_arr(nx * ny);
+  std::vector<double> T_arr(nx * ny);
+  std::vector<double> L_arr(nx * ny);
+  std::vector<double> H_arr(nx * ny);
 
   // Read in cloudy cooling/heating curve (function of density and temperature)
   i = 0;
@@ -88,12 +84,6 @@ void Host_Read_Cooling_Tables(float *cooling_table, float *heating_table)
     cooling_table[i] = float(L_arr[i]);
     heating_table[i] = float(H_arr[i]);
   }
-
-  // Free arrays used to read in table data
-  free(n_arr);
-  free(T_arr);
-  free(L_arr);
-  free(H_arr);
 }
 
 /* \fn void Load_Cuda_Textures()
