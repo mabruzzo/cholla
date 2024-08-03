@@ -1,39 +1,9 @@
 #include <string>
 
-#include "../cooling/cooling_cuda.h"         // provides Cooling_Update
-#include "../cooling/load_cloudy_texture.h"  // provides Load_Cuda_Textures and Free_Cuda_Textures
+#include "../cooling/cooling_cuda.h"  // provides configure_cooling_callback
 #include "../grid/grid3D.h"
 #include "../io/ParameterMap.h"
 #include "chemistry.h"
-
-static bool allocated_textures = false;
-
-class TabulatedCoolingFunctor
-{
-  bool cloudy_;
-
- public:
-  TabulatedCoolingFunctor(bool cloudy) : cloudy_(cloudy)
-  {
-    if (cloudy_ and not allocated_textures) {
-      Load_Cuda_Textures();
-      allocated_textures = true;
-    }
-  }
-
-  ~TabulatedCoolingFunctor()
-  {
-    // in princple, if this class actually owned the pointers to the textures, we would invoke
-    // the following snippet. But, since it is actually a global variable, we don't do anything
-    /* if (cloudy_) Free_Cuda_Textures(); */
-  }
-
-  void operator()(Grid3D& grid)
-  {
-    Header& H = grid.H;
-    Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama, this->cloudy_);
-  }
-};
 
 std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap)
 {
@@ -64,15 +34,11 @@ std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap)
 #else
   if (chemistry_kind == "none") {
     return {};
-  } else if (chemistry_kind == "tabulated-cloudy") {
-    TabulatedCoolingFunctor fn(true);
-    return {fn};
-  } else if (chemistry_kind == "piecewise-cie") {
-    TabulatedCoolingFunctor fn(false);
-    return {fn};
   } else if (chemistry_kind == "chemistry-gpu" or chemistry_kind == "grackle") {
     CHOLLA_ERROR("chemistry.kind doesn't support %s yet (unless certain macros are defined)", chemistry_kind.c_str());
   } else {
+    std::function<void(Grid3D&)> out = configure_cooling_callback(chemistry_kind, pmap);
+    if (out) return out;
     CHOLLA_ERROR("\"%s\" is not a supported chemistry.kind parameter value.", chemistry_kind.c_str());
   }
 #endif  // defined(CHEMISTRY_GPU) || defined(COOLING_GRACKLE)
