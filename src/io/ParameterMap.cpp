@@ -4,8 +4,10 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <set>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "../global/global.h"  // MAXLEN
 #include "../io/io.h"          // chprintf
@@ -123,6 +125,15 @@ KeyValueViews Try_Extract_Key_Value_View(const char* buffer)
   return {full_view.substr(0, pos), full_view.substr(pos + 1)};
 }
 
+void rstrip(std::string_view& s)
+{
+  std::size_t cur_len = s.size();
+  while ((cur_len > 0) and std::isspace(s[cur_len - 1])) {
+    cur_len--;
+  }
+  if (cur_len < s.size()) s = s.substr(0, cur_len);
+}
+
 /*! \brief Modifies the string_view to remove trailing and leading whitespace.
  *
  *  \note
@@ -138,12 +149,64 @@ void my_trim(std::string_view& s)
   }
   if (start > 0) s = s.substr(start);
 
-  /* Trim right side */
-  std::size_t cur_len = s.size();
-  while ((cur_len > 0) and std::isspace(s[cur_len - 1])) {
-    cur_len--;
+  rstrip(s);
+}
+
+/*! Helper function used to handle some parsing-related tasks that come up when considering the
+ *  full name of a parameter-table or a parameter-key.
+ *
+ *  This does the following:
+ *    1. Validates the full_name only contains allowed characters
+ *    2. for a name "a.b.c.d", we step through the "a.b.c", "a.b", and "a" to
+ *       (i)   confirm that no-segment is empty
+ *       (ii)  ensure that the part is registered as a table
+ *       (iii) ensure that the part does not collide with the name of a parameter
+ *
+ *  \returns An empty string if there aren't any problems. Otherwise the returned string provides an error message
+ */
+std::string Process_Full_Name(std::string full_name, std::set<std::string, std::less<>>& full_table_set,
+                              const std::map<std::string, ParameterMap::ParamEntry>& param_entries)
+{
+  // first, confirm the name only holds valid characters
+  std::size_t bad_value_count = 0;
+  for (char ch : full_name) {
+    bad_value_count += not(std::isalnum(ch) or (ch == '.') or (ch == '_') or (ch == '-'));
   }
-  if (cur_len < s.size()) s = s.substr(0, cur_len);
+  if (bad_value_count > 0) {
+    return "contains an unallowed character";
+  }
+
+  // now lets step through the parts of a name (delimited by the '.')
+  // -> for a name "a.b.c.d", we check "a.b.c", "a.b", and "a"
+  // -> specifically, we (i)   confirm that no-segment is empty
+  //                     (ii)  ensure that the table is registered
+  //                     (iii) ensure there aren't any collisions with parameter-names
+  const std::size_t size_minus_1 = full_name.size() - 1;
+  std::size_t rfind_start        = size_minus_1;
+  while (true) {
+    const std::size_t pos = full_name.rfind('.', rfind_start);
+    if (pos == std::string_view::npos) return {};
+    if (pos == size_minus_1) return "ends with a '.' character";
+    if (pos == 0) return "start with a '.' character";
+    if (pos == rfind_start) return "contains contiguous '.' characters";
+
+    std::string_view table_name_prefix(full_name.data(), pos);
+
+    // if table_name_prefix has been seen before, then we're done (its parents have been seen too)
+    if (full_table_set.find(table_name_prefix) != full_table_set.end()) {
+      return {};
+    }
+
+    // register table_name_prefix for the future
+    std::string table_name_prefix_str(table_name_prefix);
+    full_table_set.insert(table_name_prefix_str);
+
+    if (param_entries.find(table_name_prefix_str) != param_entries.end()) {
+      return "the (sub)table name collides with the existing \"" + table_name_prefix_str + "\" parameter";
+    }
+
+    rfind_start = pos - 1;
+  }
 }
 
 }  // anonymous namespace
@@ -153,7 +216,14 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
   int buf;
   char *s, buff[256];
 
+  // to provide consistent table-related behavior to TOML, we need to track the names of tables
+  // (we also need to track the table-names explicitly declared in headers)
+  std::set<std::string> explicit_tables;
+  std::set<std::string, std::less<>> all_tables;
+
   CHOLLA_ASSERT(fp != nullptr, "ParameterMap was passed a nullptr rather than an actual file object");
+
+  std::string cur_table_header{};
 
   /* Read next line */
   while ((s = fgets(buff, sizeof buff, fp)) != NULL) {
@@ -162,13 +232,57 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
       continue;
     }
 
-    /* Parse name/value pair from line */
-    KeyValueViews kv_pair = Try_Extract_Key_Value_View(buff);
-    // skip this line if there were any parsing errors (I think we probably abort with an
-    // error instead, but we are currently maintaining historical behavior)
-    if (kv_pair.key.empty()) continue;
-    my_trim(kv_pair.value);
-    entries_[std::string(kv_pair.key)] = {std::string(kv_pair.value), false};
+    if (buff[0] == '[') {  // here we are parsing a header like "[my_table]\n"
+      std::string_view view(buff);
+      rstrip(view);  // strip off trailing whitespace from the view
+      if (view.back() != ']') throw std::runtime_error("problem parsing a parameter-table header");
+      cur_table_header = view.substr(1, view.size() - 2);
+      if (cur_table_header.size() == 0) {
+        throw std::runtime_error("empty parameter-table headers (e.g. []) aren't allowed");
+      }
+
+      // confirm that we haven't seen this header before (and that there isn't a parameter with the same name)
+      if (explicit_tables.find(cur_table_header) != explicit_tables.end()) {
+        throw std::runtime_error("the [" + cur_table_header + "] header appears more than once");
+      } else if (this->entries_.find(cur_table_header) != this->entries_.end()) {
+        throw std::runtime_error("the [" + cur_table_header + "] header collides with a parameter of the same name");
+      }
+
+      std::string msg = Process_Full_Name(cur_table_header, all_tables, this->entries_);
+      if (not msg.empty()) {
+        throw std::runtime_error("problem encountered while parsing [" + cur_table_header + "] table header: " + msg);
+      }
+
+      // record that we've seen this headers for future checks
+      explicit_tables.insert(cur_table_header);
+      all_tables.insert(cur_table_header);
+
+    } else {  // Parse name/value pair from line
+      KeyValueViews kv_pair = Try_Extract_Key_Value_View(buff);
+      // skip this line if there were any parsing errors (I think we probably abort with an
+      // error instead, but we are currently maintaining historical behavior)
+      if (kv_pair.key.empty()) continue;
+      my_trim(kv_pair.value);
+
+      if (kv_pair.key.find('.') != std::string_view::npos) {
+        throw std::runtime_error(
+            "the \"" + std::string(kv_pair.key) +
+            "\" parameter in the contains a '.'. This isn't currently allowed in the parameter file");
+      }
+      std::string full_param_name = (not cur_table_header.empty()) ? (cur_table_header + '.') : std::string{};
+      full_param_name += std::string(kv_pair.key);
+
+      std::string msg = Process_Full_Name(full_param_name, all_tables, this->entries_);
+      if (msg.empty()) {
+        entries_[full_param_name] = {std::string(kv_pair.value), false};
+      } else if (cur_table_header.empty()) {
+        throw std::runtime_error("problem encountered while parsing the \"" + full_param_name + "\" parameter: " + msg);
+      } else {
+        throw std::runtime_error("problem encountered while parsing the \"" + std::string(kv_pair.key) +
+                                 "\" parameter in the [" + cur_table_header + "] parameter-table (aka \"" +
+                                 full_param_name + "\"): " + msg);
+      }
+    }
   }
 
   // Parse overriding args from command line
@@ -177,8 +291,11 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
     KeyValueViews kv_pair = Try_Extract_Key_Value_View(argv[i]);
     if (kv_pair.key.empty()) continue;
     my_trim(kv_pair.value);
-    // coerce to string first so we can print
     std::string key_str(kv_pair.key);
+    std::string msg = Process_Full_Name(key_str, all_tables, this->entries_);
+    if (not msg.empty()) {
+      throw std::runtime_error("problem parsing \"" + key_str + "\" parameter from the command-line: " + msg);
+    }
     std::string value_str(kv_pair.value);
     chprintf("Override with %s=%s\n", key_str.c_str(), value_str.c_str());
     entries_[key_str] = {value_str, false};

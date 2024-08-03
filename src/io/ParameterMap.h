@@ -78,6 +78,7 @@ inline param_details::TypeErr try_int_(const std::string& str, int& val)
  */
 class ParameterMap
 {
+ public:
   struct ParamEntry {
     std::string param_str;
     bool accessed;
