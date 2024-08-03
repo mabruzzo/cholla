@@ -1,23 +1,24 @@
 #include <string>
 
-#include "chemistry.h"
-#include "../io/ParameterMap.h"
-#include "../grid/grid3D.h"
-#include "../cooling/cooling_cuda.h"  // provides Cooling_Update
+#include "../cooling/cooling_cuda.h"         // provides Cooling_Update
 #include "../cooling/load_cloudy_texture.h"  // provides Load_Cuda_Textures and Free_Cuda_Textures
+#include "../grid/grid3D.h"
+#include "../io/ParameterMap.h"
+#include "chemistry.h"
 
 static bool allocated_textures = false;
 
-class TabulatedCoolingFunctor{
+class TabulatedCoolingFunctor
+{
   bool cloudy_;
-public:
-  TabulatedCoolingFunctor(bool cloudy)
-    : cloudy_(cloudy)
+
+ public:
+  TabulatedCoolingFunctor(bool cloudy) : cloudy_(cloudy)
   {
-    if (cloudy_ and not allocated_textures){
+    if (cloudy_ and not allocated_textures) {
       Load_Cuda_Textures();
       allocated_textures = true;
-    } 
+    }
   }
 
   ~TabulatedCoolingFunctor()
@@ -27,15 +28,15 @@ public:
     /* if (cloudy_) Free_Cuda_Textures(); */
   }
 
-  void operator()(Grid3D& grid) {
+  void operator()(Grid3D& grid)
+  {
     Header& H = grid.H;
     Cooling_Update(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama, this->cloudy_);
   }
-
 };
 
-std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap) {
-
+std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap)
+{
   // we use the traditional macros to set default-chemistry kinds to avoid
   // breaking older setups.
   // -> in the future, I think we can do away with this...
@@ -53,24 +54,23 @@ std::function<void(Grid3D&)> configure_chemistry_callback(ParameterMap& pmap) {
   std::string chemistry_kind = pmap.value_or("chemistry.kind", default_kind);
 
 #if defined(CHEMISTRY_GPU) || defined(COOLING_GRACKLE)
-  CHOLLA_ASSERT(
-    chemistry_kind == default_kind,
-    "based on the defined macros, it is currently an error to pass a value to the "
-    "chemistry.kind parameter other than \"%s\" (even \"none\" is invalid) This is "
-    "because the \"%s\" functionality is invoked outside of the chemistry_callback "
-    "machinery (this will be fixed in the near future)",
-    default_kind.c_str(), default_kind.c_str());
+  CHOLLA_ASSERT(chemistry_kind == default_kind,
+                "based on the defined macros, it is currently an error to pass a value to the "
+                "chemistry.kind parameter other than \"%s\" (even \"none\" is invalid) This is "
+                "because the \"%s\" functionality is invoked outside of the chemistry_callback "
+                "machinery (this will be fixed in the near future)",
+                default_kind.c_str(), default_kind.c_str());
   return {};
 #else
   if (chemistry_kind == "none") {
     return {};
-  } else if (chemistry_kind == "tabulated-cloudy"){
+  } else if (chemistry_kind == "tabulated-cloudy") {
     TabulatedCoolingFunctor fn(true);
     return {fn};
-  } else if (chemistry_kind == "piecewise-cie"){
+  } else if (chemistry_kind == "piecewise-cie") {
     TabulatedCoolingFunctor fn(false);
     return {fn};
-  } else if (chemistry_kind == "chemistry-gpu" or chemistry_kind == "grackle"){
+  } else if (chemistry_kind == "chemistry-gpu" or chemistry_kind == "grackle") {
     CHOLLA_ERROR("chemistry.kind doesn't support %s yet (unless certain macros are defined)", chemistry_kind.c_str());
   } else {
     CHOLLA_ERROR("\"%s\" is not a supported chemistry.kind parameter value.", chemistry_kind.c_str());

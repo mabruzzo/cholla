@@ -356,14 +356,14 @@ class ParameterMap;
 /*! \brief Reads the from the ParameterMap into the primary Parameters structure.
  *
  *  \note
- *  We opt to pass in an existing ParamterMap (by reference), rather than having this 
+ *  We opt to pass in an existing ParamterMap (by reference), rather than having this
  *  function return a ParameterMap, so that we can get away with simply forward-declaring
  *  ParameterMap (rather than including the full definition)
  */
-void Parse_Params(ParameterMap& pmap, struct Parameters *parms);
+void Parse_Params(ParameterMap &pmap, struct Parameters *parms);
 
 /*! \brief prints a warning if pmap contains any unused parameters */
-void Warn_Unused_Params(ParameterMap& pmap);
+void Warn_Unused_Params(ParameterMap &pmap);
 
 /*! \fn int is_param_valid(char *name);
  * \brief Verifies that a param is valid (even if not needed).  Avoids

@@ -165,19 +165,21 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv, bool close_fp)
     chprintf("Override with %s=%s\n", name, value);
   }
 
-  if (close_fp)  std::fclose(fp);
+  if (close_fp) std::fclose(fp);
 }
 
 /*! try to open a file. */
-static std::FILE* open_file_(const std::string& fname) {
-  std::FILE *fp = std::fopen(fname.c_str(), "r");
-  if (fp == nullptr)  CHOLLA_ERROR("failed to read parameter file: %s", fname.c_str());
+static std::FILE* open_file_(const std::string& fname)
+{
+  std::FILE* fp = std::fopen(fname.c_str(), "r");
+  if (fp == nullptr) CHOLLA_ERROR("failed to read parameter file: %s", fname.c_str());
   return fp;
 }
 
 ParameterMap::ParameterMap(const std::string& fname, int argc, char** argv)
-  : ParameterMap(open_file_(fname), argc, argv, true)
-{ }
+    : ParameterMap(open_file_(fname), argc, argv, true)
+{
+}
 
 int ParameterMap::warn_unused_parameters(const std::set<std::string>& ignore_params, bool abort_on_warning,
                                          bool suppress_warning_msg) const

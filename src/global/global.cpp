@@ -111,10 +111,8 @@ bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameter
 
 void Init_Param_Struct_Members(ParameterMap &param, struct Parameters *parms);
 
-
 void Parse_Params(ParameterMap &pmap, struct Parameters *parms)
 {
-
 #ifdef COSMOLOGY
   // Initialize file name as an empty string
   parms->scale_outputs_file[0] = '\0';
@@ -130,9 +128,7 @@ void Parse_Params(ParameterMap &pmap, struct Parameters *parms)
   Init_Param_Struct_Members(pmap, parms);
 }
 
-void Warn_Unused_Params(ParameterMap& pmap) {
-  pmap.warn_unused_parameters(optionalParams);
-}
+void Warn_Unused_Params(ParameterMap &pmap) { pmap.warn_unused_parameters(optionalParams); }
 
 /*! \fn void Parse_Param(char *name,char *value, struct Parameters *parms);
  *  \brief Parses and sets a single param based on name and value.

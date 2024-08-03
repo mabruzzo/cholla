@@ -4,38 +4,38 @@
 #include <math.h>
 
 #include "../cooling/cooling_cuda.h"
+#include "../cooling/texture_utilities.h"
 #include "../global/global.h"
 #include "../global/global_cuda.h"
 #include "../utils/gpu.hpp"
 
-#include "../cooling/texture_utilities.h"
-
 cudaTextureObject_t coolTexObj = 0;
 cudaTextureObject_t heatTexObj = 0;
 
-template<bool cloudy>
+template <bool cloudy>
 __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
                                Real gamma, cudaTextureObject_t coolTexObj, cudaTextureObject_t heatTexObj);
 
 __device__ Real Photoelectric_Heating(Real n, Real T, Real n_av);
 __device__ Real TI_cool(Real n, Real T);
 
-template<bool cloudy>
-static void Cooling_Update_Helper_(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt, Real gamma)
+template <bool cloudy>
+static void Cooling_Update_Helper_(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
+                                   Real gamma)
 {
   int n_cells = nx * ny * nz;
   int ngrid   = (n_cells + TPB - 1) / TPB;
   dim3 dim1dGrid(ngrid, 1, 1);
   dim3 dim1dBlock(TPB, 1, 1);
-  hipLaunchKernelGGL(cooling_kernel<cloudy>, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz, n_ghost, n_fields, dt,
-                     gama, coolTexObj, heatTexObj);
+  hipLaunchKernelGGL(cooling_kernel<cloudy>, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz, n_ghost, n_fields,
+                     dt, gama, coolTexObj, heatTexObj);
   GPU_Error_Check();
 }
 
 void Cooling_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt, Real gamma,
                     bool use_cloudy)
 {
-  if(use_cloudy){
+  if (use_cloudy) {
     Cooling_Update_Helper_<true>(dev_conserved, nx, ny, nz, n_ghost, n_fields, dt, gamma);
   } else {
     Cooling_Update_Helper_<false>(dev_conserved, nx, ny, nz, n_ghost, n_fields, dt, gamma);
@@ -48,7 +48,7 @@ void Cooling_Update(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, in
  *  \brief When passed an array of conserved variables and a timestep, adjust
  the value of the total energy for each cell according to the specified cooling
  function. */
-template<bool cloudy>
+template <bool cloudy>
 __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
                                Real gamma, cudaTextureObject_t coolTexObj, cudaTextureObject_t heatTexObj)
 {
@@ -108,7 +108,7 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
     vz = dev_conserved[3 * n_cells + id] / d;
     p  = (E - 0.5 * d * (vx * vx + vy * vy + vz * vz)) * (gamma - 1.0);
     p  = fmax(p, (Real)TINY_NUMBER);
-  // #endif
+    // #endif
 #ifdef DE
     ge = dev_conserved[(n_fields - 1) * n_cells + id] / d;
     ge = fmax(ge, (Real)TINY_NUMBER);
@@ -175,13 +175,13 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
     ge -= KB * del_T / (mu * MP * (gamma - 1.0) * SP_ENERGY_UNIT);
 #endif
 
-  // calculate cooling rate for new T
-  if constexpr (cloudy) {
-    cool = Cloudy_cool(n, T, coolTexObj, heatTexObj);
-  } else {
-    cool = CIE_cool(n, T);
-    // printf("%d %d %d %e %e %e\n", xid, yid, zid, n, T, cool);
-  }
+    // calculate cooling rate for new T
+    if constexpr (cloudy) {
+      cool = Cloudy_cool(n, T, coolTexObj, heatTexObj);
+    } else {
+      cool = CIE_cool(n, T);
+      // printf("%d %d %d %e %e %e\n", xid, yid, zid, n, T, cool);
+    }
 
     // and send back from kernel
     dev_conserved[4 * n_cells + id] = E;
