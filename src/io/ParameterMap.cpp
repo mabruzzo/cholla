@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <string_view>
 
 #include "../global/global.h"  // MAXLEN
 #include "../io/io.h"          // chprintf
@@ -92,27 +93,60 @@ param_details::TypeErr param_details::try_string_(const std::string& str, std::s
   return param_details::TypeErr::none;
 }
 
-/*! \brief Gets rid of trailing and leading whitespace. */
-static char* my_trim(char* s)
+namespace
+{  // stuff inside an anonymous namespace is local to this file
+
+/*! Helper class that specifes the parts of a string correspond to the key and the value */
+struct KeyValueViews {
+  std::string_view key;
+  std::string_view value;
+};
+
+/*! \brief Try to extract the parts of nul-terminated c-string that refers to a parameter name
+ *  and a parameter value. If there are any issues, views will be empty optional is returned. */
+KeyValueViews Try_Extract_Key_Value_View(const char* buffer)
 {
-  /* Initialize start, end pointers */
-  char *s1 = s, *s2 = &s[strlen(s) - 1];
+  // create a view that wraps the full buffer (there aren't any allocations)
+  std::string_view full_view(buffer);
 
-  /* Trim and delimit right side */
-  while ((std::isspace(*s2)) && (s2 >= s1)) {
-    s2--;
+  // we explicitly mimic the old behavior
+
+  // find the position of the equal sign
+  std::size_t pos = full_view.find('=');
+
+  // handle the edge-cases (where we can't parse a key-value pair)
+  if ((pos == 0) or                       // '=' sign is the first character
+      ((pos + 1) == full_view.size()) or  // '=' sign is the last character
+      (pos == std::string_view::npos)) {  // there is no '=' sign
+    return {std::string_view(), std::string_view()};
   }
-  *(s2 + 1) = '\0';
-
-  /* Trim left side */
-  while ((std::isspace(*s1)) && (s1 < s2)) {
-    s1++;
-  }
-
-  /* Copy finished string */
-  std::strcpy(s, s1);
-  return s;
+  return {full_view.substr(0, pos), full_view.substr(pos + 1)};
 }
+
+/*! \brief Modifies the string_view to remove trailing and leading whitespace.
+ *
+ *  \note
+ *  Since this is a string_view, we don't actually mutate any characters
+ */
+void my_trim(std::string_view& s)
+{
+  /* Trim left side */
+  std::size_t start           = 0;
+  const std::size_t max_start = s.size();
+  while ((start < max_start) and std::isspace(s[start])) {
+    start++;
+  }
+  if (start > 0) s = s.substr(start);
+
+  /* Trim right side */
+  std::size_t cur_len = s.size();
+  while ((cur_len > 0) and std::isspace(s[cur_len - 1])) {
+    cur_len--;
+  }
+  if (cur_len < s.size()) s = s.substr(0, cur_len);
+}
+
+}  // anonymous namespace
 
 ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
 {
@@ -129,40 +163,25 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
     }
 
     /* Parse name/value pair from line */
-    char name[MAXLEN], value[MAXLEN];
-    s = std::strtok(buff, "=");
-    if (s == NULL) {
-      continue;
-    } else {
-      std::strncpy(name, s, MAXLEN);
-    }
-    s = std::strtok(NULL, "=");
-    if (s == NULL) {
-      continue;
-    } else {
-      std::strncpy(value, s, MAXLEN);
-    }
-    my_trim(value);
-    entries_[std::string(name)] = {std::string(value), false};
+    KeyValueViews kv_pair = Try_Extract_Key_Value_View(buff);
+    // skip this line if there were any parsing errors (I think we probably abort with an
+    // error instead, but we are currently maintaining historical behavior)
+    if (kv_pair.key.empty()) continue;
+    my_trim(kv_pair.value);
+    entries_[std::string(kv_pair.key)] = {std::string(kv_pair.value), false};
   }
 
   // Parse overriding args from command line
   for (int i = 0; i < argc; ++i) {
-    char name[MAXLEN], value[MAXLEN];
-    s = std::strtok(argv[i], "=");
-    if (s == NULL) {
-      continue;
-    } else {
-      std::strncpy(name, s, MAXLEN);
-    }
-    s = std::strtok(NULL, "=");
-    if (s == NULL) {
-      continue;
-    } else {
-      std::strncpy(value, s, MAXLEN);
-    }
-    entries_[std::string(name)] = {std::string(value), false};
-    chprintf("Override with %s=%s\n", name, value);
+    // try to parse the argument
+    KeyValueViews kv_pair = Try_Extract_Key_Value_View(argv[i]);
+    if (kv_pair.key.empty()) continue;
+    my_trim(kv_pair.value);
+    // coerce to string first so we can print
+    std::string key_str(kv_pair.key);
+    std::string value_str(kv_pair.value);
+    chprintf("Override with %s=%s\n", key_str.c_str(), value_str.c_str());
+    entries_[key_str] = {value_str, false};
   }
 }
 
