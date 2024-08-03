@@ -9,6 +9,7 @@
 #endif /*MPI_CHOLLA*/
 
 #include <stdio.h>
+
 #include <functional>
 
 #include "../global/global.h"
@@ -470,8 +471,12 @@ class Grid3D
    *  \param feedback_callback is a crude way to optionally provide a feedback
    *  function that is invoked after the hydro-integrator, but before
    *  heating/cooling/chemistry
+   *  \param chemistry_callback is a crude way to optionally provide a cooling
+   *  function that is invoked after the hydro-integrator. At the moment,
+   *  this does not support chemistry.
    */
-  Real Update_Hydro_Grid(std::function<void(Grid3D&)>& feedback_callback);
+  Real Update_Hydro_Grid(std::function<void(Grid3D &)> &feedback_callback,
+		         std::function<void(Grid3D &)> &chemistry_callback);
 
   void Update_Time();
   /*! \fn void Write_Header_Text(FILE *fp)

@@ -27,16 +27,9 @@
   #include "../mpi/mpi_routines.h"
 #endif
 #include <stdio.h>
-#ifdef CLOUDY_COOL
-  #include "../cooling/load_cloudy_texture.h"  // provides Load_Cuda_Textures and Free_Cuda_Textures
-#endif
 
 #ifdef PARALLEL_OMP
   #include "../utils/parallel_omp.h"
-#endif
-
-#ifdef COOLING_GPU
-  #include "../cooling/cooling_cuda.h"  // provides Cooling_Update
 #endif
 
 #ifdef DUST
@@ -359,10 +352,6 @@ void Grid3D::AllocateMemory(void)
   for (int i = 0; i < H.n_fields * H.n_cells; i++) {
     C.host[i] = 0.0;
   }
-
-#ifdef CLOUDY_COOL
-  Load_Cuda_Textures();
-#endif  // CLOUDY_COOL
 }
 
 /*! \fn void set_dt(Real dti)
@@ -466,7 +455,8 @@ void Grid3D::Execute_Hydro_Integrator(void)
 #endif  // CPU_TIME
 }
 
-Real Grid3D::Update_Hydro_Grid(std::function<void(Grid3D&)>& feedback_callback)
+Real Grid3D::Update_Hydro_Grid(std::function<void(Grid3D &)> &feedback_callback,
+                               std::function<void(Grid3D &)> &chemistry_callback)
 {
 #ifdef ONLY_PARTICLES
   // Don't integrate the Hydro when only solving for particles
@@ -507,18 +497,24 @@ Real Grid3D::Update_Hydro_Grid(std::function<void(Grid3D&)>& feedback_callback)
   #endif
 #endif  // SCALAR_FLOOR
 
-// == Perform chemistry/cooling (there are a few different cases) ==
-#ifdef COOLING_GPU
-  #ifdef CPU_TIME
-  Timer.Cooling_GPU.Start();
-  #endif
-  // ==Apply Cooling from cooling/cooling_cuda.h==
-  Cooling_Update(C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama);
-  #ifdef CPU_TIME
-  Timer.Cooling_GPU.End();
-  #endif
+  // == Perform chemistry/cooling (there are a few different cases) ==
 
-#endif  // COOLING_GPU
+  if (chemistry_callback) {
+#if defined(CHEMISTRY_GPU) || defined(COOLING_GRACKLE)
+    CHOLLA_ERROR(
+        "sanity check failed: currently it is an error to use the chemistry_callback "
+        "when chemistry (on GPU/via Grackle) is enabled. Currently, chemistry_callback"
+        "only supports tabulated heating/cooling curves of this in the future.");
+#endif  // defined(CHEMISTRY_GPU) || defined(COOLING_GRACKLE)
+#ifdef CPU_TIME
+    Timer.Cooling_GPU.Start();
+#endif
+    // ==Apply Cooling from cooling/chemistry.h==
+    chemistry_callback(*this);
+#ifdef CPU_TIME
+    Timer.Cooling_GPU.End();
+#endif
+  }
 
 #ifdef DUST
   // ==Apply dust from dust/dust_cuda.h==
@@ -681,12 +677,6 @@ void Grid3D::FreeMemory(void)
 
 #ifdef COOLING_GRACKLE
   Cool.Free_Memory();
-#endif
-
-#ifdef COOLING_GPU
-  #ifdef CLOUDY_COOL
-  Free_Cuda_Textures();
-  #endif
 #endif
 
 #ifdef CHEMISTRY_GPU
