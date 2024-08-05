@@ -418,3 +418,53 @@ int ParameterMap::warn_unused_parameters(const std::set<std::string>& ignore_par
   }
   return unused_params;
 }
+
+void ParameterMap::Enforce_Table_Content_Uniform_Access_Status(std::string table_name, bool expect_unused) const
+{
+  // error check:
+  std::string_view table_name_view(table_name);
+  if (table_name_view.back() == '.') table_name_view = table_name_view.substr(0, table_name_view.size() - 1);
+  CHOLLA_ASSERT(table_name_view.size() > 0, "the table_name_view must contain at least one character");
+
+  std::string prefix      = std::string(table_name_view) + '.';
+  std::size_t prefix_size = prefix.size();
+
+  std::string problematic_parameter{};
+  for (auto it = entries_.lower_bound(prefix); it != entries_.end(); ++it) {
+    const std::string& name                     = it->first;
+    const ParameterMap::ParamEntry& param_entry = it->second;
+    if (name.compare(0, prefix_size, prefix) != 0) break;
+
+    if (param_entry.accessed == expect_unused) {
+      problematic_parameter = name;
+      break;
+    }
+  }
+
+  if (problematic_parameter.size() == 0) return;  // no issues!
+
+  // Report the errors:
+  if (expect_unused) {
+    CHOLLA_ERROR("Internal Error: the %s shouldn't have been accessed yet", problematic_parameter.c_str());
+  } else {
+    // gather the parameters that have been accessed (for an informative message)
+    std::string par_list{};
+    for (auto it = entries_.lower_bound(prefix); it != entries_.end(); ++it) {
+      const std::string& name                     = it->first;
+      const ParameterMap::ParamEntry& param_entry = it->second;
+      if (name.compare(0, prefix_size, prefix) != 0) break;
+
+      if (param_entry.accessed) {
+        par_list += "\n   ";
+        par_list += name;
+      }
+    }
+
+    if (par_list.size() > 0) {
+      CHOLLA_ERROR("Based on the parameter(s):%s\nthe %s parameter should not be present in the parameter file",
+                   par_list.c_str(), problematic_parameter.c_str());
+    }
+    CHOLLA_ERROR("Something is wrong, the %s parameter should not be present in the parameter file",
+                 problematic_parameter.c_str());
+  }
+}

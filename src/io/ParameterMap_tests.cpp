@@ -259,10 +259,15 @@ key2=456
   DummyFile dummy      = DummyFile(CONTENTS);
   ParameterMap pmap    = ParameterMap(dummy.fp, 0, nullptr);
   ASSERT_EQ(pmap.size(), 4);
+  pmap.Enforce_Table_Content_Uniform_Access_Status("table-1", true);
   ASSERT_EQ(pmap.value<double>("table-1.key1"), -1.0);
   ASSERT_EQ(pmap.value<int>("table-1.key2"), 123);
+  pmap.Enforce_Table_Content_Uniform_Access_Status("table-1", false);
+
+  pmap.Enforce_Table_Content_Uniform_Access_Status("table-2", true);
   ASSERT_EQ(pmap.value<double>("table-2.key1"), -2.0);
   ASSERT_EQ(pmap.value<int>("table-2.key2"), 456);
+  pmap.Enforce_Table_Content_Uniform_Access_Status("table-2", false);
 }
 
 TEST(tALLParameterMapTables, EmptyName)

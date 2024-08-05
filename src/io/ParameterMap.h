@@ -199,6 +199,13 @@ class ParameterMap
     }
   }
 
+  /*! Aborts with an error message if one or more of the parameters in the specified table has been used or has not
+   *  been used. The precise details depend on the `expect_unused` argument.
+   *
+   *  \note
+   *  It may be better if this were a function that operated on ParameterMap rather than a method */
+  void Enforce_Table_Content_Uniform_Access_Status(std::string table_name, bool expect_unused) const;
+
  private:  // private helper methods
   /* helper function template that tries to retrieve values associated with a given parameter.
    *
