@@ -280,7 +280,7 @@ TEST(tALLParameterMapTables, BadNames)
 {
   std::vector<std::string> bad_names = {"[.]",    "[ ]",        "[ fdssf]",   "[sadfasd ]", "[sda.]",
                                         "[.asd]", "[ssad.sd ]", "[ sdas.sd]", "[sds sdsd]"};
-  for (const std::string table_name : bad_names) {
+  for (const std::string& table_name : bad_names) {
     std::string contents = table_name + "\nkey1=-1.0\n";
     DummyFile dummy      = DummyFile(contents.c_str());
     ASSERT_ANY_THROW(ParameterMap pmap = ParameterMap(dummy.fp, 0, nullptr););

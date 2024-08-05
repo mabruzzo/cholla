@@ -152,6 +152,49 @@ void my_trim(std::string_view& s)
   rstrip(s);
 }
 
+/*! This describe the current parsing status (primarily for the purpose of formatting exception messages) */
+struct CurrentParseStatus {
+  enum ContextKind { param_from_file, table_heading, cli_parameter};
+  
+  ContextKind context;
+  std::string current_table_heading;
+  std::string full_param_name;
+  std::string_view current_param_name;
+
+  const std::string& get_full_name() const {
+    if (this->context == CurrentParseStatus::ContextKind::table_heading) return current_table_heading;
+    return full_param_name;
+  }
+
+  // it's ok to be inefficient (since we are aborting)
+  std::string format_err_msg(const std::string& reason) const
+  {
+    std::string msg = "Problem encountered while parsing the ";
+    if (this->context == CurrentParseStatus::ContextKind::table_heading) {
+      msg += '[';
+      msg += current_table_heading;
+      msg += "] parameter-table heading: "
+    } else {
+      msg += '"';
+      msg += current_param_name;
+      msg += "\" parameter ";
+      if (this->context == CurrentParseStatus::ContextKind::cli_parameter) {
+        msg += "from the commmand-line: "
+      } else if (current_table_heading.empty()) {
+        msg += "from the parameter file: "
+      } else {
+        msg += "under the parameter-file's [";
+        msg += current_table_heading;
+        msg += "] heading (aka the \"";
+        msg += this->get_full_name();
+        msg += "\" parameter): ";
+      } 
+    }
+    msg += reason;
+    return msg;
+  }
+};
+
 /*! Helper function used to handle some parsing-related tasks that come up when considering the
  *  full name of a parameter-table or a parameter-key.
  *
@@ -170,7 +213,7 @@ std::string Process_Full_Name(std::string full_name, std::set<std::string, std::
   // first, confirm the name only holds valid characters
   std::size_t bad_value_count = 0;
   for (char ch : full_name) {
-    bad_value_count += not(std::isalnum(ch) or (ch == '.') or (ch == '_') or (ch == '-'));
+    bad_value_count +=  ((ch != '.') and (ch != '_') and (ch != '-') and not std::isalnum(ch));
   }
   if (bad_value_count > 0) {
     return "contains an unallowed character";
