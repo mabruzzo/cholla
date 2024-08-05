@@ -356,7 +356,7 @@ class CoolRecipeCloudy
   cudaTextureObject_t heatTexObj_;
 
  public:
-  __host__ CoolRecipeCloudy()
+  __host__ CoolRecipeCloudy(std::string filename)
   {
     // for now, we simply don't deallocate the textures
     // -> this is poor form and something that should be fixed...
@@ -364,7 +364,7 @@ class CoolRecipeCloudy
     //    are global and will live for the lifetime of the simulation
     if (!allocated_heating_cooling_textures) {
       allocated_heating_cooling_textures = true;
-      Load_Cuda_Textures();
+      Load_Cuda_Textures(filename);
     }
     this->coolTexObj_ = coolTexObj;
     this->heatTexObj_ = heatTexObj;
@@ -430,7 +430,10 @@ class CoolRecipeCloudyAndPhotoHeating
   Real n_av_cgs;
 
  public:
-  __host__ CoolRecipeCloudyAndPhotoHeating(Real n_av_cgs) : n_av_cgs{n_av_cgs} {}
+  __host__ CoolRecipeCloudyAndPhotoHeating(std::string filename, Real n_av_cgs)
+      : pure_cloudy_recipe(filename), n_av_cgs{n_av_cgs}
+  {
+  }
 
   __device__ Real cool_rate(Real n, Real T)
   {
@@ -477,15 +480,17 @@ __device__ Real TI_cool(Real n, Real T)
 
 std::function<void(Grid3D &)> configure_cooling_callback(std::string kind, ParameterMap &pmap)
 {
-  bool photoelectric_heating_flag_specified = pmap.has_param("chemistry.photoelectric_heating");
+  // the caller of this function will ensure that parameters associated with photoelectric_heating
+  // or chemistry.data_file aren't set when using piecewise-cie
   if (kind == "tabulated-cloudy") {
+    std::string filename = pmap.value_or("chemistry.data_file", std::string());
     if (pmap.value_or("chemistry.photoelectric_heating", false)) {
-      // make 100.0 configurable!
-      CoolRecipeCloudyAndPhotoHeating recipe(100.0);
+      double n_av_cgs = pmap.value_or("chemistry.photoelectric_n_av_cgs", 100.0);
+      CoolRecipeCloudyAndPhotoHeating recipe(filename, n_av_cgs);
       CoolingUpdateExecutor<CoolRecipeCloudyAndPhotoHeating> updater(recipe);
       return {updater};
     } else {
-      CoolRecipeCloudy recipe;
+      CoolRecipeCloudy recipe(filename);
       CoolingUpdateExecutor<CoolRecipeCloudy> updater(recipe);
       return {updater};
     }
