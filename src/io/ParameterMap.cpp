@@ -152,46 +152,101 @@ void my_trim(std::string_view& s)
   rstrip(s);
 }
 
-/*! This describe the current parsing status (primarily for the purpose of formatting exception messages) */
-struct CurrentParseStatus {
-  enum ContextKind { param_from_file, table_heading, cli_parameter};
-  
-  ContextKind context;
-  std::string current_table_heading;
-  std::string full_param_name;
-  std::string_view current_param_name;
+/*! \brief Object used to read in lines from a `FILE*`
+ *
+ *  This primarily exists to help with error/warning formatting
+ */
+struct FileLineStream {
+  long long line_num;
+  FILE* fp;
+  char *s, buff[256];
 
-  const std::string& get_full_name() const {
-    if (this->context == CurrentParseStatus::ContextKind::table_heading) return current_table_heading;
-    return full_param_name;
+  FileLineStream(FILE* fp) : line_num{-1}, fp{fp}, s{nullptr} {}
+
+  bool next()
+  {
+    this->line_num++;
+    return (this->s = fgets(this->buff, sizeof this->buff, this->fp)) != NULL;
   }
 
-  // it's ok to be inefficient (since we are aborting)
-  std::string format_err_msg(const std::string& reason) const
+  // formats a slightly more generic error
+  [[noreturn]] void error(std::string reason) const
   {
-    std::string msg = "Problem encountered while parsing the ";
-    if (this->context == CurrentParseStatus::ContextKind::table_heading) {
-      msg += '[';
-      msg += current_table_heading;
-      msg += "] parameter-table heading: "
-    } else {
-      msg += '"';
-      msg += current_param_name;
-      msg += "\" parameter ";
-      if (this->context == CurrentParseStatus::ContextKind::cli_parameter) {
-        msg += "from the commmand-line: "
-      } else if (current_table_heading.empty()) {
-        msg += "from the parameter file: "
-      } else {
-        msg += "under the parameter-file's [";
-        msg += current_table_heading;
-        msg += "] heading (aka the \"";
-        msg += this->get_full_name();
-        msg += "\" parameter): ";
-      } 
-    }
+    std::string msg = "parsing problem\n";
+    // specify the location
+    msg += this->location_description_();
+    // include the reason
+    msg += "   err: ";
     msg += reason;
-    return msg;
+    throw std::runtime_error(msg);
+  }
+
+  // more-detailed error formatting
+  [[noreturn]] void error(std::string reason, std::string full_name, bool is_table_header) const
+  {
+    std::string msg = (is_table_header) ? "table-header parsing problem\n" : "parameter-name parsing problem\n";
+    // give table/parameter name
+    msg += (is_table_header) ? "   table-name: " : "   full-parameter-name: ";
+    msg += full_name;
+    msg += '\n';
+    // specify the location
+    msg += this->location_description_();
+    // include the reason
+    msg += "   err: ";
+    msg += reason;
+    throw std::runtime_error(msg);
+  }
+
+  void warn(std::string reason) const
+  {
+    std::string msg                  = "parameter-file parsing warning\n";
+    std::string location_description = this->location_description_();
+    chprintf("parameter-file parsing warning\n%s   message:%s\n", location_description.c_str(), reason.c_str());
+  }
+
+ private:
+  std::string location_description_() const
+  {
+    std::string out = "   on line ";
+    out += std::to_string(this->line_num);
+    out += "of the parameter file: ";
+    out += this->s;
+    out += '\n';
+    return out;
+  }
+};
+
+struct CliLineStream {
+  char** next_arg;
+  char** stop;
+  char* s;
+
+  CliLineStream(int argc, char** argv) : next_arg{argv}, stop{argv + argc}, s{nullptr} {};
+
+  bool next()
+  {
+    if (this->next_arg == this->stop) return false;
+    this->s = *this->next_arg;
+    this->next_arg++;
+    return true;
+  }
+
+  [[noreturn]] void error(std::string reason, std::string full_name, bool is_table_header) const
+  {
+    CHOLLA_ASSERT(not is_table_header, "something went very wrong - can't parse table header from cli");
+
+    std::string msg = "parameter-name parsing problem\n";
+    // give table/parameter name
+    msg += "   full-parameter-name: ";
+    msg += full_name;
+    msg += '\n';
+    // specify the location
+    msg += "   from cli arg: ";
+    msg += s;
+    // include the reason
+    msg += "   err: ";
+    msg += reason;
+    throw std::runtime_error(msg);
   }
 };
 
@@ -213,7 +268,7 @@ std::string Process_Full_Name(std::string full_name, std::set<std::string, std::
   // first, confirm the name only holds valid characters
   std::size_t bad_value_count = 0;
   for (char ch : full_name) {
-    bad_value_count +=  ((ch != '.') and (ch != '_') and (ch != '-') and not std::isalnum(ch));
+    bad_value_count += ((ch != '.') and (ch != '_') and (ch != '-') and not std::isalnum(ch));
   }
   if (bad_value_count > 0) {
     return "contains an unallowed character";
@@ -256,20 +311,35 @@ std::string Process_Full_Name(std::string full_name, std::set<std::string, std::
 
 ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
 {
-  int buf;
-  char *s, buff[256];
+  CHOLLA_ASSERT(fp != nullptr, "ParameterMap was passed a nullptr rather than an actual file object");
+  FileLineStream file_line_stream(fp);
+  CliLineStream cli_line_stream(argc, argv);
 
   // to provide consistent table-related behavior to TOML, we need to track the names of tables
   // (we also need to track the table-names explicitly declared in headers)
-  std::set<std::string> explicit_tables;
-  std::set<std::string, std::less<>> all_tables;
 
-  CHOLLA_ASSERT(fp != nullptr, "ParameterMap was passed a nullptr rather than an actual file object");
+  // tracks any explicitly defined table-names (e.g. with [my-table] header). This is done so that we can ensure that
+  // each table is only explicitly defined once.
+  std::set<std::string> explicit_tables;
+
+  // tracks every defined table-name. This ensure that there aren't no table name collides with a parameter name.
+  //  -> we add all explicitly defined tables (like [my-table]). It also tracks implicitly defined tables. A table
+  //     can be implicitly defined:
+  //     1. In an explicit definition. For example, the [my.first.table] header implicitly defines the table
+  //        "my.first.table". It also implicitly defines the "my.first" and "my" tables when they don't exist
+  //     2. In a dotted parameter name. For example `my.table.val=3` defines the `my.table.val` parameter. It also
+  //        implicitly defines the `my.table
+  //  -> std::less<> is here so we can compare perform "heterogenous-lookups." In other words, it lets us check if
+  //     the set contains a string specified in a `std::string_view` instance even though the set internally stores
+  //     `std::string` instances (without heterogenous-lookups we couldn't use std::string_view)
+  std::set<std::string, std::less<>> all_tables;
 
   std::string cur_table_header{};
 
   /* Read next line */
-  while ((s = fgets(buff, sizeof buff, fp)) != NULL) {
+  while (file_line_stream.next()) {
+    char* buff = file_line_stream.s;
+
     /* Skip blank lines and comments */
     if (buff[0] == '\n' || buff[0] == '#' || buff[0] == ';') {
       continue;
@@ -278,23 +348,19 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
     if (buff[0] == '[') {  // here we are parsing a header like "[my_table]\n"
       std::string_view view(buff);
       rstrip(view);  // strip off trailing whitespace from the view
-      if (view.back() != ']') throw std::runtime_error("problem parsing a parameter-table header");
+      if (view.back() != ']') file_line_stream.error("problem parsing a parameter-table header");
       cur_table_header = view.substr(1, view.size() - 2);
-      if (cur_table_header.size() == 0) {
-        throw std::runtime_error("empty parameter-table headers (e.g. []) aren't allowed");
-      }
+      if (cur_table_header.size() == 0) file_line_stream.error("empty table-names aren't allowed");
 
       // confirm that we haven't seen this header before (and that there isn't a parameter with the same name)
       if (explicit_tables.find(cur_table_header) != explicit_tables.end()) {
-        throw std::runtime_error("the [" + cur_table_header + "] header appears more than once");
+        file_line_stream.error("table-name can't appear more than once", cur_table_header, true);
       } else if (this->entries_.find(cur_table_header) != this->entries_.end()) {
-        throw std::runtime_error("the [" + cur_table_header + "] header collides with a parameter of the same name");
+        file_line_stream.error("table-name collides with a parameter of the same name");
       }
 
       std::string msg = Process_Full_Name(cur_table_header, all_tables, this->entries_);
-      if (not msg.empty()) {
-        throw std::runtime_error("problem encountered while parsing [" + cur_table_header + "] table header: " + msg);
-      }
+      if (not msg.empty()) file_line_stream.error(msg, cur_table_header, true);
 
       // record that we've seen this headers for future checks
       explicit_tables.insert(cur_table_header);
@@ -302,43 +368,33 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
 
     } else {  // Parse name/value pair from line
       KeyValueViews kv_pair = Try_Extract_Key_Value_View(buff);
-      // skip this line if there were any parsing errors (I think we probably abort with an
-      // error instead, but we are currently maintaining historical behavior)
-      if (kv_pair.key.empty()) continue;
+      if (kv_pair.key.empty()) {
+        file_line_stream.warn("skipping line due to invalid format (this may become an error in the future)");
+        continue;
+      }
       my_trim(kv_pair.value);
 
       if (kv_pair.key.find('.') != std::string_view::npos) {
-        throw std::runtime_error(
-            "the \"" + std::string(kv_pair.key) +
-            "\" parameter in the contains a '.'. This isn't currently allowed in the parameter file");
+        file_line_stream.error("parameter-names in the parameter-file aren't currently allowed to contain a '.'");
       }
       std::string full_param_name = (not cur_table_header.empty()) ? (cur_table_header + '.') : std::string{};
       full_param_name += std::string(kv_pair.key);
 
       std::string msg = Process_Full_Name(full_param_name, all_tables, this->entries_);
-      if (msg.empty()) {
-        entries_[full_param_name] = {std::string(kv_pair.value), false};
-      } else if (cur_table_header.empty()) {
-        throw std::runtime_error("problem encountered while parsing the \"" + full_param_name + "\" parameter: " + msg);
-      } else {
-        throw std::runtime_error("problem encountered while parsing the \"" + std::string(kv_pair.key) +
-                                 "\" parameter in the [" + cur_table_header + "] parameter-table (aka \"" +
-                                 full_param_name + "\"): " + msg);
-      }
+      if (not msg.empty()) file_line_stream.error(msg, full_param_name, false);
+      entries_[full_param_name] = {std::string(kv_pair.value), false};
     }
   }
 
   // Parse overriding args from command line
-  for (int i = 0; i < argc; ++i) {
+  while (cli_line_stream.next()) {
     // try to parse the argument
-    KeyValueViews kv_pair = Try_Extract_Key_Value_View(argv[i]);
+    KeyValueViews kv_pair = Try_Extract_Key_Value_View(cli_line_stream.s);
     if (kv_pair.key.empty()) continue;
     my_trim(kv_pair.value);
     std::string key_str(kv_pair.key);
     std::string msg = Process_Full_Name(key_str, all_tables, this->entries_);
-    if (not msg.empty()) {
-      throw std::runtime_error("problem parsing \"" + key_str + "\" parameter from the command-line: " + msg);
-    }
+    if (not msg.empty()) cli_line_stream.error(msg, key_str, false);
     std::string value_str(kv_pair.value);
     chprintf("Override with %s=%s\n", key_str.c_str(), value_str.c_str());
     entries_[key_str] = {value_str, false};
