@@ -4,7 +4,6 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
-#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -262,7 +261,7 @@ struct CliLineStream {
  *
  *  \returns An empty string if there aren't any problems. Otherwise the returned string provides an error message
  */
-std::string Process_Full_Name(std::string full_name, std::set<std::string, std::less<>>& full_table_set,
+std::string Process_Full_Name(std::string full_name, std::map<std::string, bool, std::less<>>& full_table_map,
                               const std::map<std::string, ParameterMap::ParamEntry>& param_entries)
 {
   // first, confirm the name only holds valid characters
@@ -291,13 +290,11 @@ std::string Process_Full_Name(std::string full_name, std::set<std::string, std::
     std::string_view table_name_prefix(full_name.data(), pos);
 
     // if table_name_prefix has been seen before, then we're done (its parents have been seen too)
-    if (full_table_set.find(table_name_prefix) != full_table_set.end()) {
-      return {};
-    }
+    if (full_table_map.find(table_name_prefix) != full_table_map.end()) return {};
 
     // register table_name_prefix for the future
     std::string table_name_prefix_str(table_name_prefix);
-    full_table_set.insert(table_name_prefix_str);
+    full_table_map[table_name_prefix_str] = false;  // we assign false because it was implicitly declared
 
     if (param_entries.find(table_name_prefix_str) != param_entries.end()) {
       return "the (sub)table name collides with the existing \"" + table_name_prefix_str + "\" parameter";
@@ -315,16 +312,15 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
   FileLineStream file_line_stream(fp);
   CliLineStream cli_line_stream(argc, argv);
 
-  // to provide consistent table-related behavior to TOML, we need to track the names of tables
-  // (we also need to track the table-names explicitly declared in headers)
-
-  // tracks any explicitly defined table-names (e.g. with [my-table] header). This is done so that we can ensure that
-  // each table is only explicitly defined once.
-  std::set<std::string> explicit_tables;
-
-  // tracks every defined table-name. This ensure that there aren't no table name collides with a parameter name.
-  //  -> we add all explicitly defined tables (like [my-table]). It also tracks implicitly defined tables. A table
-  //     can be implicitly defined:
+  // to provide consistent table-related behavior to TOML, we need to track the names of tables to ensure that:
+  //  1. no table is explicitly defined more than once
+  //  2. no table name collides with a parameter name.
+  //
+  // To accomplish this, we:
+  //  -> we add all explicitly defined table-names (e.g. we add "my-table" if we encounter the [my-table] header).
+  //     The associated value is true if it was explicitly defined
+  //  -> we also tracks implicitly defined tables. An implicitly defined table is associated with a false value.
+  //     A table can be implicitly defined:
   //     1. In an explicit definition. For example, the [my.first.table] header implicitly defines the table
   //        "my.first.table". It also implicitly defines the "my.first" and "my" tables when they don't exist
   //     2. In a dotted parameter name. For example `my.table.val=3` defines the `my.table.val` parameter. It also
@@ -332,7 +328,7 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
   //  -> std::less<> is here so we can compare perform "heterogenous-lookups." In other words, it lets us check if
   //     the set contains a string specified in a `std::string_view` instance even though the set internally stores
   //     `std::string` instances (without heterogenous-lookups we couldn't use std::string_view)
-  std::set<std::string, std::less<>> all_tables;
+  std::map<std::string, bool, std::less<>> all_tables;
 
   std::string cur_table_header{};
 
@@ -353,8 +349,10 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
       if (cur_table_header.size() == 0) file_line_stream.error("empty table-names aren't allowed");
 
       // confirm that we haven't seen this header before (and that there isn't a parameter with the same name)
-      if (explicit_tables.find(cur_table_header) != explicit_tables.end()) {
-        file_line_stream.error("table-name can't appear more than once", cur_table_header, true);
+      auto search = all_tables.find(cur_table_header);
+      if ((search != all_tables.end()) and (search->second)) {
+        // when search->second is false, there's no issue (since the table was never explicitly defined)
+        file_line_stream.error("the same table header can't appear more than once", cur_table_header, true);
       } else if (this->entries_.find(cur_table_header) != this->entries_.end()) {
         file_line_stream.error("table-name collides with a parameter of the same name");
       }
@@ -362,9 +360,8 @@ ParameterMap::ParameterMap(std::FILE* fp, int argc, char** argv)
       std::string msg = Process_Full_Name(cur_table_header, all_tables, this->entries_);
       if (not msg.empty()) file_line_stream.error(msg, cur_table_header, true);
 
-      // record that we've seen this headers for future checks
-      explicit_tables.insert(cur_table_header);
-      all_tables.insert(cur_table_header);
+      // record that we've seen this header (for future checks)
+      all_tables[cur_table_header] = true;
 
     } else {  // Parse name/value pair from line
       KeyValueViews kv_pair = Try_Extract_Key_Value_View(buff);
