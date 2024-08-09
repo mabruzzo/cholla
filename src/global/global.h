@@ -312,11 +312,16 @@ char snr_filename[MAXLEN] = {'\0'};
   Real Omega_M;
   Real Omega_L;
   Real Omega_b;
+  Real Omega_R;
+  Real w0;
+  Real wa;
   Real Init_redshift;
   Real End_redshift;
-  char scale_outputs_file[MAXLEN];  // File for the scale_factor output values
-                                    // for cosmological simulations
-#endif                              // COSMOLOGY
+
+  // File for the scale_factor output values for cosmological simulations
+  char scale_outputs_file[MAXLEN];
+  #define EXPANSION_HISTORY_FILE_NAME "expansion_history.txt"
+#endif  // COSMOLOGY
 #ifdef TILED_INITIAL_CONDITIONS
   Real tile_length;
 #endif  // TILED_INITIAL_CONDITIONS
