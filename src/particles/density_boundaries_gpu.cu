@@ -71,7 +71,7 @@ void Grid3D::Set_Particles_Density_Boundaries_Periodic_GPU(int direction, int si
 {
   #ifndef GRAVITY_GPU
   CHOLLA_ERROR("This function should not be invoked when compiled without GPU-Gravity");
-  #endif GRAVITY_GPU
+  #endif  // GRAVITY_GPU
   int n_ghost, nx_g, ny_g, nz_g, size, ngrid, n_i, n_j;
   n_ghost = Particles.G.n_ghost_particles_grid;
   nx_g    = Particles.G.nx_local + 2 * n_ghost;
@@ -154,7 +154,7 @@ int Grid3D::Load_Particles_Density_Boundary_to_Buffer_GPU(int direction, int sid
 {
     #ifndef GRAVITY_GPU
   CHOLLA_ERROR("This function should not be invoked when compiled without GPU-Gravity");
-    #endif GRAVITY_GPU
+    #endif  // GRAVITY_GPU
   int n_ghost, nx_g, ny_g, nz_g, size_buffer, ngrid, n_i, n_j;
   n_ghost = Particles.G.n_ghost_particles_grid;
   nx_g    = Particles.G.nx_local + 2 * n_ghost;
@@ -245,7 +245,7 @@ void Grid3D::Unload_Particles_Density_Boundary_From_Buffer_GPU(int direction, in
 {
     #ifndef GRAVITY_GPU
   CHOLLA_ERROR("This function should not be invoked when compiled without GPU-Gravity");
-    #endif GRAVITY_GPU
+    #endif  // GRAVITY_GPU
   int n_ghost, nx_g, ny_g, nz_g, size_buffer, ngrid, n_i, n_j;
   n_ghost = Particles.G.n_ghost_particles_grid;
   nx_g    = Particles.G.nx_local + 2 * n_ghost;
