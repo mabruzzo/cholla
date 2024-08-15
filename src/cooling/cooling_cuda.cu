@@ -146,10 +146,10 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
     // calculate change in temperature given dt
     del_T = cool * dt * TIME_UNIT * (gamma - 1.0) / (n * KB);
 
-    // limit change in temperature to 1%
-    while (del_T / T > 0.01) {
-      // what dt gives del_T = 0.01*T?
-      dt_sub = 0.01 * T * n * KB / (cool * TIME_UNIT * (gamma - 1.0));
+    // limit change in temperature to 1% (we use fabs for when heating dominates)
+    while (fabs(del_T / T) > 0.01) {
+      // what dt gives del_T with a magnitude of 0.01*T? (we use fabs for cases when heating dominates)
+      dt_sub = fabs(0.01 * T * n * KB / (cool * TIME_UNIT * (gamma - 1.0)));
       // apply that dt
       T -= cool * dt_sub * TIME_UNIT * (gamma - 1.0) / (n * KB);
       // how much time is left from the original timestep?
@@ -158,17 +158,6 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
       // calculate cooling again
       cool = recipe.cool_rate(n, T);
       // calculate new change in temperature
-
-      // at one point, the logic for the above ifdef was called the
-      // Photoelectric_Heating function in the CLOUDY_COOL branch, and had an
-      // additional branch TI_COOL that assigned cool the value of TI_cool(n,T)
-      // -> there were a number of other differences in this function. Because that change
-      //    was made in git-branch that signficantly diverged from dev, we decided to
-      //    simply reverted the logic in order to simplify the merge,
-      // -> to find that alternative logic, use git-blame to identify the commit where
-      //    this text was added (it's the same commit where the logic was reverted)
-      //    was reverted in the same) with lots of merge-conflicts.
-
       del_T = cool * dt * TIME_UNIT * (gamma - 1.0) / (n * KB);
     }
 
@@ -181,9 +170,6 @@ __global__ void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int 
 #ifdef DE
     ge -= KB * del_T / (mu * MP * (gamma - 1.0) * SP_ENERGY_UNIT);
 #endif
-
-    // calculate cooling rate for new T
-    cool = recipe.cool_rate(n, T);
 
     // and send back from kernel
     dev_conserved[4 * n_cells + id] = E;
