@@ -542,7 +542,7 @@ __global__ void Cluster_Feedback_Kernel(const feedback_details::ParticleProps pa
                                   age, mass_ref, particle_props.id_dev[i],
                                   spatial_props.dx, spatial_props.dy, spatial_props.dz, 
                                   spatial_props.nx_g, spatial_props.ny_g, spatial_props.nz_g,
-                                  spatial_props.n_ghost, num_SN_dev[i], s_info, conserved_dev);
+                                  spatial_props.n_ghost, num_SN_dev[i], cycle_props.n_step, s_info, conserved_dev);
 
 #if FEEDBACK_LOG_INDIVIDUAL
           // explicitly use json formatting to make log-parsing easier:

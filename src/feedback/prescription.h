@@ -13,6 +13,18 @@
 
 namespace fb_prescription {
 
+inline __device__ void log_fb(int cycle_num, int num_SN, bool is_resolved,
+                              Real pos_x_indU, Real pos_y_indU, Real pos_z_indU,
+                              Real vel_x, Real vel_y, Real vel_z, part_int_t particle_id,
+                              Real n_0_cgs = -1.23456789){
+  // use json formatting so this is easier to parse from logs
+  kernel_printf(
+    "..fb: { \"cycle\":%d, \"id\": %lld, \"num_SN\": %d, \"resolved\": %d, \"n0\": %g, \"pos_indU\": [%g, %g, %g], "
+    "\"vel\": [%g, %g, %g]}\n",
+    cycle_num, (long long int)(particle_id), num_SN, int(is_resolved), n_0_cgs,
+    pos_x_indU, pos_y_indU, pos_z_indU, vel_x, vel_y, vel_z);
+}
+
 /** Compute radius of shell-formation (in kpc) of a supernova
  *
  *  Some feedback prescriptions used this to switch between resolved & unresolved
@@ -59,7 +71,7 @@ struct ResolvedSNPrescription{
   static __device__ void apply_feedback(Real pos_x_indU, Real pos_y_indU, Real pos_z_indU, Real vel_x, Real vel_y, Real vel_z,
                                         Real age, Real& mass_ref, part_int_t particle_id,
                                         Real dx, Real dy, Real dz, int nx_g, int ny_g, int nz_g,
-                                        int n_ghost, int num_SN, Real* s_info, Real* conserved_dev)
+                                        int n_ghost, int num_SN, int cycle_num, Real* s_info, Real* conserved_dev)
   {
     int tid  = threadIdx.x;
 
@@ -72,6 +84,9 @@ struct ResolvedSNPrescription{
     Real feedback_density = num_SN * feedback::MASS_PER_SN / dV;
 
     mass_ref = max(0.0, mass_ref - num_SN * feedback::MASS_PER_SN); // update the cluster mass
+
+    log_fb(cycle_num, num_SN, true, pos_x_indU, pos_y_indU, pos_z_indU,
+           vel_x, vel_y, vel_z, particle_id);
 
     ResolvedSNPrescription::apply(Arr3<Real>{pos_x_indU, pos_y_indU, pos_z_indU}, vel_x, vel_y, vel_z,
                                   nx_g, ny_g, nx_g * ny_g * nz_g, conserved_dev,
@@ -363,7 +378,7 @@ struct ResolvedAndUnresolvedSNe {
   static __device__ void apply_feedback(Real pos_x_indU, Real pos_y_indU, Real pos_z_indU, Real vel_x, Real vel_y, Real vel_z,
                                         Real age, Real& mass_ref, part_int_t particle_id,
                                         Real dx, Real dy, Real dz, int nx_g, int ny_g, int nz_g, int n_ghost,
-                                        int num_SN, Real* s_info, Real* conserved_dev)
+                                        int num_SN, int cycle_num, Real* s_info, Real* conserved_dev)
   {
     int tid  = threadIdx.x;
 
@@ -394,6 +409,9 @@ struct ResolvedAndUnresolvedSNe {
 
     mass_ref = max(0.0, mass_ref - num_SN * feedback::MASS_PER_SN);  // update the cluster mass
     Real feedback_density = num_SN * feedback::MASS_PER_SN / dV;
+
+    log_fb(cycle_num, num_SN, is_resolved, pos_x_indU, pos_y_indU, pos_z_indU,
+           vel_x, vel_y, vel_z, particle_id, n_0_cgs);
 
     if (is_resolved) {
       // inject energy and density
