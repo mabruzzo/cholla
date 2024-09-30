@@ -1222,7 +1222,7 @@ __global__ void Temperature_Floor_Kernel(Real *dev_conserved, int nx, int ny, in
                                          Real U_floor)
 {
   int id, xid, yid, zid, n_cells;
-  Real d, d_inv, vx, vy, vz, E, Ekin, U;
+  Real d, d_inv, vx, vy, vz, E, Ekin, Udens;
   n_cells = nx * ny * nz;
 
   // get a global thread ID
@@ -1242,17 +1242,28 @@ __global__ void Temperature_Floor_Kernel(Real *dev_conserved, int nx, int ny, in
     E     = dev_conserved[4 * n_cells + id];
     Ekin  = 0.5 * d * (vx * vx + vy * vy + vz * vz);
 
-    U = (E - Ekin) / d;
-    if (U < U_floor) {
+    int num_applications = 0;
+
+    Udens = (E - Ekin);
+    if (Udens / d < U_floor) {
+      num_applications++;
       dev_conserved[4 * n_cells + id] = Ekin + d * U_floor;
     }
 
 #ifdef DE
-    U = dev_conserved[(n_fields - 1) * n_cells + id] / d;
-    if (U < U_floor) {
+    Udens = dev_conserved[(n_fields - 1) * n_cells + id];
+    if (Udens / d < U_floor) {
+      num_applications++;
       dev_conserved[(n_fields - 1) * n_cells + id] = d * U_floor;
     }
+#else
+    Udens = -123456789;  // set to a dumb-looking number so that it's clear that it's not real when printing it
 #endif
+
+    if (num_applications > 0) {
+      printf("T_Floor %3d %3d %3d d: %e spec_Ekin:%e spec_eint_floor: %e BC: E_dens:%e GasEnergy_dens:%e\n", xid, yid,
+             zid, d, Ekin, U_floor, E, Udens);
+    }
   }
 }
 
@@ -1286,7 +1297,7 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
 {
   int id = i + (j)*nx + (k)*nx * ny;
 
-  Real d, mx, my, mz, E, P;
+  Real d, mx, my, mz, E, P, Udens;
   d  = conserved[grid_enum::density * ncells + id];
   mx = conserved[grid_enum::momentum_x * ncells + id];
   my = conserved[grid_enum::momentum_y * ncells + id];
@@ -1294,7 +1305,13 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
   E  = conserved[grid_enum::Energy * ncells + id];
   P  = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
 
-  printf("%3d %3d %3d BC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e\n", i, j, k, d, E, P, mx / d, my / d, mz / d);
+#ifdef DE
+  Udens = conserved[grid_enum::GasEnergy * ncells + id];
+#else
+  Udens = -123456789;  // set to a dumb-looking number so that it's clear that it's not real when printing it
+#endif
+  printf("%3d %3d %3d BC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Uadv:%e\n", i, j, k, d, E, P, mx / d, my / d, mz / d,
+         Udens);
 
   int idn;
   int N = 0;
@@ -1363,8 +1380,9 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
   conserved[id + ncells * grid_enum::momentum_z] = d_av * vz_av;
   conserved[id + ncells * grid_enum::Energy] =
       P_av / (gamma - 1.0) + 0.5 * d_av * (vx_av * vx_av + vy_av * vy_av + vz_av * vz_av);
+  Udens = P_av / (gamma - 1.0);
 #ifdef DE
-  conserved[id + ncells * grid_enum::GasEnergy] = P_av / (gamma - 1.0);
+  conserved[id + ncells * grid_enum::GasEnergy] = Udens;
 #endif
 #ifdef SCALAR
   for (int n = 0; n < NSCALARS; n++) {  // NOLINT
@@ -1376,7 +1394,8 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
   E = P_av / (gamma - 1.0) + 0.5 * d_av * (vx_av * vx_av + vy_av * vy_av + vz_av * vz_av);
   P = P_av;
 
-  printf("%3d %3d %3d FC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e\n", i, j, k, d, E, P, vx_av, vy_av, vz_av);
+  printf("%3d %3d %3d FC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Udens:%e\n", i, j, k, d, E, P, vx_av, vy_av, vz_av,
+         Udens);
 }
 
 void Apply_Scalar_Floor(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int field_num, Real scalar_floor)
