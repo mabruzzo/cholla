@@ -156,8 +156,11 @@ void Simple_Algorithm_3D_CUDA(Real *d_conserved, Real *d_grav_potential, int nx,
   GPU_Error_Check();
 
   // Step 3b: Address any crashed threads
-  hipLaunchKernelGGL(PostUpdate_Conserved_Correct_Crashed_3D, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz,
-                     x_off, y_off, z_off, n_ghost, gama, n_fields, slow_check);
+  cuda_utilities::AutomaticLaunchParams static const post_update_correction_launch_params(
+      PostUpdate_Conserved_Correct_Crashed_3D, n_cells);
+  hipLaunchKernelGGL(PostUpdate_Conserved_Correct_Crashed_3D, post_update_correction_launch_params.get_numBlocks(),
+                     post_update_correction_launch_params.get_threadsPerBlock(), 0, 0, dev_conserved, nx, ny, nz, x_off,
+                     y_off, z_off, n_ghost, gama, n_fields, slow_check);
   GPU_Error_Check();
 
   #ifdef DE
