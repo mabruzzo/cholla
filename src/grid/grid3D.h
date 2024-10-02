@@ -476,7 +476,7 @@ class Grid3D
    *  this does not support chemistry.
    */
   Real Update_Hydro_Grid(std::function<void(Grid3D &)> &feedback_callback,
-		         std::function<void(Grid3D &)> &chemistry_callback);
+                         std::function<void(Grid3D &)> &chemistry_callback);
 
   void Update_Time();
   /*! \fn void Write_Header_Text(FILE *fp)

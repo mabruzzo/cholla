@@ -474,8 +474,7 @@ Real Grid3D::Update_Hydro_Grid(std::function<void(Grid3D &)> &feedback_callback,
 #endif  // GRAVITY
 
   Execute_Hydro_Integrator();
-
-  if (feedback_callback){
+  if (feedback_callback) {
     feedback_callback(*this);
   }
 
