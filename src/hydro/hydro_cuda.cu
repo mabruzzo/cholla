@@ -1297,23 +1297,28 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
 {
   int id = i + (j)*nx + (k)*nx * ny;
 
-  Real d, mx, my, mz, E, P, Udens;
-  d  = conserved[grid_enum::density * ncells + id];
-  mx = conserved[grid_enum::momentum_x * ncells + id];
-  my = conserved[grid_enum::momentum_y * ncells + id];
-  mz = conserved[grid_enum::momentum_z * ncells + id];
-  E  = conserved[grid_enum::Energy * ncells + id];
-  P  = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
+  // print out the the values stored in the cell before the correction
+  // -> we put this logic (and variable declarations in its own scope) to force us to redeclare variables later
+  //    (this lets the compiler help us avoid silly errors where we forget to load a variable)
+  {
+    Real d, mx, my, mz, E, P, Udens;
+    d  = conserved[grid_enum::density * ncells + id];
+    mx = conserved[grid_enum::momentum_x * ncells + id];
+    my = conserved[grid_enum::momentum_y * ncells + id];
+    mz = conserved[grid_enum::momentum_z * ncells + id];
+    E  = conserved[grid_enum::Energy * ncells + id];
+    P  = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
 
 #ifdef DE
-  Udens = conserved[grid_enum::GasEnergy * ncells + id];
+    Udens = conserved[grid_enum::GasEnergy * ncells + id];
 #else
-  Udens = -123456789;  // set to a dumb-looking number so that it's clear that it's not real when printing it
+    Udens = -123456789;  // set to a dumb-looking number so that it's clear that it's not real when printing it
 #endif
-  printf("%3d %3d %3d BC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Uadv:%e\n", i, j, k, d, E, P, mx / d, my / d, mz / d,
-         Udens);
+    printf("%3d %3d %3d BC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Uadv:%e\n", i, j, k, d, E, P, mx / d, my / d,
+           mz / d, Udens);
+  }
 
-  int idn;
+  // initialize the variables that we use to accumulate information about neighboring values
   int N = 0;
   Real d_av, vx_av, vy_av, vz_av, P_av;
   d_av = vx_av = vy_av = vz_av = P_av = 0.0;
@@ -1332,13 +1337,18 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
           continue;
         }
 
-        idn = ii + jj * nx + kk * nx * ny;
-        d   = conserved[grid_enum::density * ncells + idn];
-        mx  = conserved[grid_enum::momentum_x * ncells + idn];
-        my  = conserved[grid_enum::momentum_y * ncells + idn];
-        mz  = conserved[grid_enum::momentum_z * ncells + idn];
-        E   = conserved[grid_enum::Energy * ncells + idn];
-        P   = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
+        int idn = ii + jj * nx + kk * nx * ny;
+        Real d  = conserved[grid_enum::density * ncells + idn];
+        Real mx = conserved[grid_enum::momentum_x * ncells + idn];
+        Real my = conserved[grid_enum::momentum_y * ncells + idn];
+        Real mz = conserved[grid_enum::momentum_z * ncells + idn];
+        Real E  = conserved[grid_enum::Energy * ncells + idn];
+
+        // this function can NOT use the "advected internal energy field" to compute pressure when the dual energy
+        // formalism is in use. This is because the function can be invoked immediately after the flux update, but
+        // before the internal energy and total energy fields are "reconciled"
+        Real P  = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
+
 #ifdef SCALAR
         for (int n = 0; n < NSCALARS; n++) {  // NOLINT
           scalar[n] = conserved[grid_enum::scalar * ncells + idn];
@@ -1362,6 +1372,7 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
     }
   }
 
+  // update the accumulator variables so that they now hold averages
   P_av  = P_av / N;
   vx_av = vx_av / d_av;
   vy_av = vy_av / d_av;
@@ -1371,18 +1382,18 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
     scalar_av[n] = scalar_av[n] / d_av;
   }
 #endif
-  d_av = d_av / N;
+  d_av          = d_av / N;
+  Real Udens_av = P_av / (gamma - 1.0);
+  Real E_av     = Udens_av + 0.5 * d_av * math_utils::SquareMagnitude(vx_av, vy_av, vz_av);
 
   // replace cell values with new averaged values
   conserved[id + ncells * grid_enum::density]    = d_av;
   conserved[id + ncells * grid_enum::momentum_x] = d_av * vx_av;
   conserved[id + ncells * grid_enum::momentum_y] = d_av * vy_av;
   conserved[id + ncells * grid_enum::momentum_z] = d_av * vz_av;
-  conserved[id + ncells * grid_enum::Energy] =
-      P_av / (gamma - 1.0) + 0.5 * d_av * (vx_av * vx_av + vy_av * vy_av + vz_av * vz_av);
-  Udens = P_av / (gamma - 1.0);
+  conserved[id + ncells * grid_enum::Energy]     = E_av;
 #ifdef DE
-  conserved[id + ncells * grid_enum::GasEnergy] = Udens;
+  conserved[id + ncells * grid_enum::GasEnergy] = Udens_av;
 #endif
 #ifdef SCALAR
   for (int n = 0; n < NSCALARS; n++) {  // NOLINT
@@ -1390,12 +1401,9 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
   }
 #endif
 
-  d = d_av;
-  E = P_av / (gamma - 1.0) + 0.5 * d_av * (vx_av * vx_av + vy_av * vy_av + vz_av * vz_av);
-  P = P_av;
-
-  printf("%3d %3d %3d FC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Udens:%e\n", i, j, k, d, E, P, vx_av, vy_av, vz_av,
-         Udens);
+  // print out the values now that they have been replaced
+  printf("%3d %3d %3d FC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Udens:%e\n", i, j, k, d_av, E_av, P_av, vx_av, vy_av,
+         vz_av, Udens_av);
 }
 
 void Apply_Scalar_Floor(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int field_num, Real scalar_floor)
