@@ -36,7 +36,7 @@ __global__ void Update_Conserved_Variables_3D_half(Real *dev_conserved, Real *de
 void VL_Algorithm_3D_CUDA(Real *d_conserved, Real *d_grav_potential, int nx, int ny, int nz, int x_off, int y_off,
                           int z_off, int n_ghost, Real dx, Real dy, Real dz, Real xbound, Real ybound, Real zbound,
                           Real dt, int n_fields, int custom_grav, Real density_floor, Real *host_grav_potential,
-                          const SlowCellConditionChecker &slow_check)
+                          const SlowCellConditionChecker &slow_check, int *any_error)
 {
   // Here, *dev_conserved contains the entire
   // set of conserved variables on the grid
@@ -379,7 +379,7 @@ void VL_Algorithm_3D_CUDA(Real *d_conserved, Real *d_grav_potential, int nx, int
       PostUpdate_Conserved_Correct_Crashed_3D, n_cells);
   hipLaunchKernelGGL(PostUpdate_Conserved_Correct_Crashed_3D, post_update_correction_launch_params.get_numBlocks(),
                      post_update_correction_launch_params.get_threadsPerBlock(), 0, 0, dev_conserved, nx, ny, nz, x_off,
-                     y_off, z_off, n_ghost, gama, n_fields, slow_check);
+                     y_off, z_off, n_ghost, gama, n_fields, slow_check, any_error);
   GPU_Error_Check();
 
   #ifdef MHD

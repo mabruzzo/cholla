@@ -18,6 +18,7 @@
 #include "../integrators/simple_2D_cuda.h"
 #include "../integrators/simple_3D_cuda.h"
 #include "../io/io.h"
+#include "../utils/DeviceVector.h"
 #include "../utils/error_handling.h"
 #ifdef MPI_CHOLLA
   #include <mpi.h>
@@ -414,6 +415,9 @@ void Grid3D::Execute_Hydro_Integrator(void)
   Timer.Hydro_Integrator.Start();
 #endif  // CPU_TIME
 
+  // this buffer holds 1 element that is initialized to 0
+  cuda_utilities::DeviceVector<int> error_code_buffer(1, true);
+
   // Run the hydro integrator on the grid
   if (H.nx > 1 && H.ny == 1 && H.nz == 1)  // 1D
   {
@@ -438,16 +442,22 @@ void Grid3D::Execute_Hydro_Integrator(void)
 #ifdef VL
     VL_Algorithm_3D_CUDA(C.device, C.d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy,
                          H.dz, H.xbound, H.ybound, H.zbound, H.dt, H.n_fields, H.custom_grav, H.density_floor,
-                         C.Grav_potential, SlowCellConditionChecker(1.0 / H.min_dt_slow, H.dx, H.dy, H.dz));
+                         C.Grav_potential, SlowCellConditionChecker(1.0 / H.min_dt_slow, H.dx, H.dy, H.dz),
+                         error_code_buffer.data());
 #endif  // VL
 #ifdef SIMPLE
     Simple_Algorithm_3D_CUDA(C.device, C.d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy,
                              H.dz, H.xbound, H.ybound, H.zbound, H.dt, H.n_fields, H.custom_grav, H.density_floor,
-                             C.Grav_potential, SlowCellConditionChecker(1.0 / H.min_dt_slow, H.dx, H.dy, H.dz));
+                             C.Grav_potential, SlowCellConditionChecker(1.0 / H.min_dt_slow, H.dx, H.dy, H.dz),
+                             error_code_buffer.data());
 #endif  // SIMPLE
   } else {
     chprintf("Error: Grid dimensions nx: %d  ny: %d  nz: %d  not supported.\n", H.nx, H.ny, H.nz);
     chexit(-1);
+  }
+
+  if (error_code_buffer[0] != 0) {
+    CHOLLA_ERROR("An error occurred during the hydro calculation.");
   }
 
 #ifdef CPU_TIME

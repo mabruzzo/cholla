@@ -24,7 +24,7 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
 
 __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off,
                                                         int y_off, int z_off, int n_ghost, Real gamma, int n_fields,
-                                                        SlowCellConditionChecker slow_check);
+                                                        SlowCellConditionChecker slow_check, int *any_error);
 
 /*!
  * \brief Determine the maximum inverse crossing time in a specific cell
@@ -132,6 +132,10 @@ __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, i
  *    * To respect the simulations boundaries, values in "stale" cells are excluded from the averages. If
  *      stale-depth is 0, then values from beyond the edge of the simulation are excluded from averages
  *
+ *  \returns A value of ``true`` indicates that the operation succeeded. A value of ``false`` indicates a failure.
+ *    To succeed, this function requires that there are at least 2 neighboring cells with valid values that can be
+ *    used to compute the average.
+ *
  *  \note
  *  From a perfectionist's perspective, one could argue that we really should increment the stale-depth whenever
  *  we call this function (in other words, we should have an extra layer of ghost zones for each time we call
@@ -142,7 +146,7 @@ __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, i
  *      band-aid solution to begin with.
  *    * Aside: a similar argument could be made for the energy-synchronization step of the dual-energy formalism.
  */
-__device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int nz, int ncells, int n_fields,
+__device__ bool Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int nz, int ncells, int n_fields,
                                         Real gamma, Real *conserved, int stale_depth,
                                         SlowCellConditionChecker slow_check);
 

@@ -383,7 +383,7 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
 
 __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off,
                                                         int y_off, int z_off, int n_ghost, Real gamma, int n_fields,
-                                                        SlowCellConditionChecker slow_check)
+                                                        SlowCellConditionChecker slow_check, int *any_error)
 {
   int n_cells = nx * ny * nz;
 
@@ -401,7 +401,12 @@ __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int
         dev_conserved[4 * n_cells + id] != dev_conserved[4 * n_cells + id]) {
       printf("%3d %3d %3d Thread crashed in final update. %e - - - %e\n", xid + x_off, yid + y_off, zid + z_off,
              dev_conserved[id], dev_conserved[4 * n_cells + id]);
-      Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved, n_ghost, slow_check);
+      bool success = Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved,
+                                             n_ghost, slow_check);
+      if (!success) {
+        printf("%3d %3d %3d there was an issue with averaging the neighboring cells\n", xid+x_off, yid+y_off, zid+z_off);
+        *any_error = 1;
+      }
     }
 #endif  // DENSITY_FLOOR
     /*
@@ -1291,7 +1296,7 @@ __device__ Real Average_Cell_Single_Field(int field_indx, int i, int j, int k, i
   return v_avrg;
 }
 
-__device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int nz, int ncells, int n_fields,
+__device__ bool Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int nz, int ncells, int n_fields,
                                         Real gamma, Real *conserved, int stale_depth,
                                         SlowCellConditionChecker slow_check)
 {
@@ -1347,7 +1352,7 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
         // this function can NOT use the "advected internal energy field" to compute pressure when the dual energy
         // formalism is in use. This is because the function can be invoked immediately after the flux update, but
         // before the internal energy and total energy fields are "reconciled"
-        Real P  = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
+        Real P = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
 
 #ifdef SCALAR
         for (int n = 0; n < NSCALARS; n++) {  // NOLINT
@@ -1404,6 +1409,9 @@ __device__ void Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
   // print out the values now that they have been replaced
   printf("%3d %3d %3d FC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Udens:%e\n", i, j, k, d_av, E_av, P_av, vx_av, vy_av,
          vz_av, Udens_av);
+
+  // success requires that at least 2 cells contributed to the average
+  return N > 1;
 }
 
 void Apply_Scalar_Floor(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int field_num, Real scalar_floor)
