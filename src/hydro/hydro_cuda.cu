@@ -1372,6 +1372,14 @@ __device__ bool Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
           }
 #endif
           N++;
+        } else if ((ii != i) || (jj != j) || (kk != k)) {
+#ifdef DE
+          Real Udens = conserved[grid_enum::GasEnergy * ncells + idn];
+#else
+          Real Udens = -123456789;  // set to a dumb-looking number so that it's clear that it's not real when printing it
+#endif
+          printf("%3d %3d %3d skipped-neighbor: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Uadv:%e\n", ii, jj, kk, d, E,
+                 P, mx / d, my / d, mz / d, Udens);
         }
       }
     }
