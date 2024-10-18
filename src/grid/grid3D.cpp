@@ -473,10 +473,12 @@ Real Grid3D::Update_Hydro_Grid(std::function<void(Grid3D &)> &feedback_callback,
   Extrapolate_Grav_Potential();
 #endif  // GRAVITY
 
+  // Evolve the hydrodynamical quantities
   Execute_Hydro_Integrator();
-  if (feedback_callback) {
-    feedback_callback(*this);
-  }
+
+  // apply the floors
+  // ================
+  // -> we need do this before we handle source terms because it is necessary for chemistry/cooling
 
 #ifdef TEMPERATURE_FLOOR
   // Set the lower limit temperature (Internal Energy)
@@ -495,6 +497,12 @@ Real Grid3D::Update_Hydro_Grid(std::function<void(Grid3D &)> &feedback_callback,
   Apply_Scalar_Floor(C.device, H.nx, H.ny, H.nz, H.n_ghost, grid_enum::dust_density, H.scalar_floor);
   #endif
 #endif  // SCALAR_FLOOR
+
+  // apply source terms
+  // ==================
+  if (feedback_callback) {
+    feedback_callback(*this);
+  }
 
   // == Perform chemistry/cooling (there are a few different cases) ==
 
@@ -558,6 +566,11 @@ Real Grid3D::Update_Hydro_Grid(std::function<void(Grid3D &)> &feedback_callback,
   non_hydro_elapsed_time += cur_grackle_timing;
   #endif  // CPU_TIME
 #endif    // COOLING_GRACKLE
+
+  // Finally, it is time to handle calculation of the timestep for the next cycle
+  // ============================================================================
+  // -> first, we perform certain modifications to the fields that are partially
+  //    motivated by the impact that they have on the size of the timestep
 
   // Temperature Ceiling
 #ifdef TEMPERATURE_CEILING
