@@ -132,6 +132,13 @@ __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, i
  *    * To respect the simulations boundaries, values in "stale" cells are excluded from the averages. If
  *      stale-depth is 0, then values from beyond the edge of the simulation are excluded from averages
  *
+ *  \pre When using the dual-energy formalism, this function should **ONLY** be called in contexts where all
+ *    "non-crashed" cells are known to have *reconciled* "advected internal energy" and "total energy" field values.
+ *    This is important for averaging.
+ *        - In practice, this limitation is mostly meaningful inside of a hydro solver
+ *        - Outside of a hydro-solver, you can definitely come up with pathological cases where applying source terms,
+ *          but you would need to go out of your way to do something to violate this precondition
+ *
  *  \returns A value of ``true`` indicates that the operation succeeded. A value of ``false`` indicates a failure.
  *    To succeed, this function requires that there are at least 2 neighboring cells with valid values that can be
  *    used to compute the average.

@@ -374,14 +374,6 @@ void VL_Algorithm_3D_CUDA(Real *d_conserved, Real *d_grav_potential, int nx, int
                      dt, gama, n_fields, custom_grav, density_floor, dev_grav_potential);
   GPU_Error_Check();
 
-  // Step 6b: Address any crashed threads
-  cuda_utilities::AutomaticLaunchParams static const post_update_correction_launch_params(
-      PostUpdate_Conserved_Correct_Crashed_3D, n_cells);
-  hipLaunchKernelGGL(PostUpdate_Conserved_Correct_Crashed_3D, post_update_correction_launch_params.get_numBlocks(),
-                     post_update_correction_launch_params.get_threadsPerBlock(), 0, 0, dev_conserved, nx, ny, nz, x_off,
-                     y_off, z_off, n_ghost, gama, n_fields, slow_check, any_error);
-  GPU_Error_Check();
-
   #ifdef MHD
   // Update the magnetic fields
   hipLaunchKernelGGL(mhd::Update_Magnetic_Field_3D, update_magnetic_launch_params.get_numBlocks(),
@@ -400,6 +392,19 @@ void VL_Algorithm_3D_CUDA(Real *d_conserved, Real *d_grav_potential, int nx, int
                      n_fields);
   GPU_Error_Check();
   #endif  // DE
+
+  // Step 7: Address any crashed threads
+  // -> it's REALLY important that we do this **AFTER** the dual energy formalism update
+  // -> in more detail, galaxy simulations with particle-feedback, seem to commonly produce scenarios where a cell
+  //    crashes and all of its neighbors have positive total energies that are smaller than the respective kinetic
+  //    energies (this problem might be resolved if we use larger deposition stencils)
+  // -> by positioning this correction after the dual energy formalism, we can correct for this issue.
+  cuda_utilities::AutomaticLaunchParams static const post_update_correction_launch_params(
+      PostUpdate_Conserved_Correct_Crashed_3D, n_cells);
+  hipLaunchKernelGGL(PostUpdate_Conserved_Correct_Crashed_3D, post_update_correction_launch_params.get_numBlocks(),
+                     post_update_correction_launch_params.get_threadsPerBlock(), 0, 0, dev_conserved, nx, ny, nz, x_off,
+                     y_off, z_off, n_ghost, gama, n_fields, slow_check, any_error);
+  GPU_Error_Check();
 
   return;
 }
