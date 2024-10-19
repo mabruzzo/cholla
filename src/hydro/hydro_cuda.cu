@@ -381,6 +381,17 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
   }
 }
 
+/*! Returns whether a cell has crashed
+ *
+ *  \note
+ *  It probably won't come up, but it's unclear why we don't consider a density of 0 or
+ *  energy of 0 to be crashed... (I'm just keeping the logic consistent with what it used to be)
+ */
+__device__ bool Cell_Is_Crashed(Real density, Real Etot_density)
+{
+  return (density < 0.0) || (density != density) || (Etot_density < 0.0) || (Etot_density != Etot_density);
+}
+
 __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off,
                                                         int y_off, int z_off, int n_ghost, Real gamma, int n_fields,
                                                         SlowCellConditionChecker slow_check, int *any_error)
@@ -395,16 +406,20 @@ __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int
 
   if (xid > n_ghost - 1 && xid < nx - n_ghost && yid > n_ghost - 1 && yid < ny - n_ghost && zid > n_ghost - 1 &&
       zid < nz - n_ghost) {
-#if !(defined(DENSITY_FLOOR) && defined(TEMPERATURE_FLOOR))
     // threads corresponding to real cells do the calculation
-    if (dev_conserved[id] < 0.0 || dev_conserved[id] != dev_conserved[id] || dev_conserved[4 * n_cells + id] < 0.0 ||
-        dev_conserved[4 * n_cells + id] != dev_conserved[4 * n_cells + id]) {
+
+    // this logic get's skipped if we apply both a density floor and temperature floor
+    // (we apply the logic if we only use one kind of floor or we use neither kind)
+#if !(defined(DENSITY_FLOOR) && defined(TEMPERATURE_FLOOR))
+    if (Cell_Is_Crashed(dev_conserved[grid_enum::density * n_cells + id],
+                        dev_conserved[grid_enum::Energy * n_cells + id])) {
       printf("%3d %3d %3d Thread crashed in final update. %e - - - %e\n", xid + x_off, yid + y_off, zid + z_off,
-             dev_conserved[id], dev_conserved[4 * n_cells + id]);
+             dev_conserved[grid_enum::density * n_cells + id], dev_conserved[grid_enum::Energy * n_cells + id]);
       bool success = Average_Cell_All_Fields(xid, yid, zid, nx, ny, nz, n_cells, n_fields, gamma, dev_conserved,
                                              n_ghost, slow_check);
       if (!success) {
-        printf("%3d %3d %3d there was an issue with averaging the neighboring cells\n", xid+x_off, yid+y_off, zid+z_off);
+        printf("%3d %3d %3d there was an issue with averaging the neighboring cells\n", xid + x_off, yid + y_off,
+               zid + z_off);
         *any_error = 1;
       }
     }
@@ -941,6 +956,20 @@ __global__ void Partial_Update_Advected_Internal_Energy_3D(Real *dev_conserved, 
   }
 }
 
+/*! The folliowing function is used to retrieve the total energy density if the cell isn't crashed.
+ *  If the cell is returned, 0 is returned
+ *
+ *  \note
+ *  This is useful for implementing `Select_Internal_Energy_ND`
+ */
+__device__ Real E_If_Not_Crashed(Real *dev_conserved, int n_cells, int spatial_idx)
+{
+  Real d = dev_conserved[grid_enum::density * n_cells + spatial_idx];
+  Real E = dev_conserved[grid_enum::Energy * n_cells + spatial_idx];
+  // NOTE: don't try to get clever here (we explicitly want to return 0 in cases where E is NaN)
+  return Cell_Is_Crashed(d, E) ? 0 : E;
+}
+
 __global__ void Select_Internal_Energy_1D(Real *dev_conserved, int nx, int n_ghost, int n_fields)
 {
   int id, xid, n_cells;
@@ -970,14 +999,25 @@ __global__ void Select_Internal_Energy_1D(Real *dev_conserved, int nx, int n_gho
     U_advected = dev_conserved[(n_fields - 1) * n_cells + id];
     U_total    = E - 0.5 * d * (vx * vx + vy * vy + vz * vz);
 
-    // find the max nearby total energy
-    Emax = fmax(dev_conserved[4 * n_cells + imo], E);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + ipo]);
+    // We will deal with this crashed cell later in a different kernel... (at the time of writing, a 1D
+    // simulation always uses floors for this purpose)
+    if (Cell_Is_Crashed(d, E)) return;
 
-    // We only use the "advected" internal energy if both:
+    // find the max nearby total energy (from the local cell and any uncrashed neighbors)
+    // -> we take the stance that "crashed" neighbors are unreliable, even if total energy looks ok
+    // -> to effectively ignore a crashed neighbor, the `E_If_Not_Crashed` function provides a value of 0,
+    //    instead of the neighboring cell's E if the neighbor crashed
+    Emax = E;
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, imo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, ipo));
+
+    // Ordinarily, we only use the "advected" internal energy if both:
     // - the thermal energy divided by total energy is a small fraction (smaller than eta_1)
     // - AND we aren't masking shock heating (details controlled by Emax & eta_2)
-    if ((U_total / E > eta_1) or (U_total / Emax > eta_2)) {
+    // We ALSO explicitly use the "advected" internal energy if the total energy is positive but doesn't
+    // exceed kinetic energy (i.e. U_total <= 0).
+    bool prefer_U_total = (U_total > E * eta_1) or (U_total > Emax * eta_2);
+    if (prefer_U_total and (U_total > 0)) {
       U = U_total;
     } else {
       U = U_advected;
@@ -1030,16 +1070,27 @@ __global__ void Select_Internal_Energy_2D(Real *dev_conserved, int nx, int ny, i
     U_advected = dev_conserved[(n_fields - 1) * n_cells + id];
     U_total    = E - 0.5 * d * (vx * vx + vy * vy + vz * vz);
 
-    // find the max nearby total energy
-    Emax = fmax(dev_conserved[4 * n_cells + imo], E);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + ipo]);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + jmo]);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + jpo]);
+    // We will deal with this crashed cell later in a different kernel... (at the time of writing, a 1D
+    // simulation always uses floors for this purpose)
+    if (Cell_Is_Crashed(d, E)) return;
 
-    // We only use the "advected" internal energy if both:
+    // find the max nearby total energy (from the local cell and any uncrashed neighbors)
+    // -> we take the stance that "crashed" neighbors are unreliable, even if total energy looks ok
+    // -> to effectively ignore a crashed neighbor, the `E_If_Not_Crashed` function provides a value of 0,
+    //    instead of the neighboring cell's E if the neighbor crashed
+    Emax = E;
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, imo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, ipo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, jmo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, jpo));
+
+    // We only use the "advected" internal energy if the following 3 conditions are satisfied:
     // - the thermal energy divided by total energy is a small fraction (smaller than eta_1)
     // - AND we aren't masking shock heating (details controlled by Emax & eta_2)
-    if ((U_total / E > eta_1) or (U_total / Emax > eta_2)) {
+    // We ALSO explicitly use the "advected" internal energy if the total energy is positive but doesn't
+    // exceed kinetic energy (i.e. U_total <= 0).
+    bool prefer_U_total = (U_total > E * eta_1) or (U_total > Emax * eta_2);
+    if (prefer_U_total and (U_total > 0)) {
       U = U_total;
     } else {
       U = U_advected;
@@ -1057,6 +1108,15 @@ __global__ void Select_Internal_Energy_2D(Real *dev_conserved, int nx, int ny, i
 
 __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields)
 {
+  // The scenario where E > 0 and E doesn't exceed the kinetic energy (i.e. U_total <= 0),
+  // comes up with some frequency when we include particle feedback.
+  // -> in that scenario, we explicitly use the value held by the U_advected field
+  // -> the separate `Sync_Energies_3D` kernel, we then override the E field with KE + U_advected
+  // -> one might argue we should actually override the E field with KE + U_advected before this kernel
+  //    (we leave that for future consideration)
+  // -> regardless, it is **REALLY IMPORTANT** that the E field is **NOT** modified in this kernel
+  //    (modifying it will produce race conditions!!!)
+
   int id, xid, yid, zid, n_cells;
   Real d, d_inv, vx, vy, vz, E, U_total, U_advected, U, Emax;
   int imo, ipo, jmo, jpo, kmo, kpo;
@@ -1097,18 +1157,30 @@ __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, i
     U_advected = dev_conserved[(n_fields - 1) * n_cells + id];
     U_total    = E - 0.5 * d * (vx * vx + vy * vy + vz * vz);
 
-    // find the max nearby total energy
-    Emax = fmax(dev_conserved[4 * n_cells + imo], E);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + ipo]);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + jmo]);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + jpo]);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + kmo]);
-    Emax = fmax(Emax, dev_conserved[4 * n_cells + kpo]);
+    // We will deal with this crashed cell later in a different kernel... (at the time of writing, a 1D
+    // simulation always uses floors for this purpose)
+    if (Cell_Is_Crashed(d, E)) return;
 
-    // We only use the "advected" internal energy if both:
+    // find the max nearby total energy (from the local cell and any uncrashed neighbors)
+    // -> we take the stance that "crashed" neighbors are unreliable, even if total energy looks ok
+    // -> to effectively ignore a crashed neighbor, the `E_If_Not_Crashed` function provides a value of 0,
+    //    instead of the neighboring cell's E if the neighbor crashed
+    Emax = E;
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, imo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, ipo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, jmo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, jpo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, kmo));
+    Emax = fmax(Emax, E_If_Not_Crashed(dev_conserved, n_cells, kpo));
+
+    // Ordinarily, we only use the "advected" internal energy if both:
     // - the thermal energy divided by total energy is a small fraction (smaller than eta_1)
     // - AND we aren't masking shock heating (details controlled by Emax & eta_2)
-    if ((U_total / E > eta_1) or (U_total / Emax > eta_2)) {
+    // We also explicitly use the "advected" internal energy if the total energy is positive but doesn't
+    // exceed kinetic energy (i.e. U_total <= 0). This scenario comes up in simulations with particle-based
+    // feedback.
+    bool prefer_U_total = (U_total > E * eta_1) or (U_total > Emax * eta_2);
+    if (prefer_U_total and (U_total > 0)) {
       U = U_total;
     } else {
       U = U_advected;
@@ -1376,10 +1448,11 @@ __device__ bool Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
 #ifdef DE
           Real Udens = conserved[grid_enum::GasEnergy * ncells + idn];
 #else
-          Real Udens = -123456789;  // set to a dumb-looking number so that it's clear that it's not real when printing it
+          Real Udens =
+              -123456789;  // set to a dumb-looking number so that it's clear that it's not real when printing it
 #endif
-          printf("%3d %3d %3d skipped-neighbor: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Uadv:%e\n", ii, jj, kk, d, E,
-                 P, mx / d, my / d, mz / d, Udens);
+          printf("%3d %3d %3d skipped-neighbor: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Uadv:%e\n", ii, jj, kk, d, E, P,
+                 mx / d, my / d, mz / d, Udens);
         }
       }
     }
