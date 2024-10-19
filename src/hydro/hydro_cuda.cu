@@ -1387,9 +1387,12 @@ __device__ bool Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
     P  = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
 
 #ifdef DE
-    Udens = conserved[grid_enum::GasEnergy * ncells + id];
+    Udens               = conserved[grid_enum::GasEnergy * ncells + id];
+    Real kinetic_energy = hydro_utilities::Calc_Kinetic_Energy_From_Momentum(d, mx, my, mz);
+    P                   = hydro_utilities::Get_Pressure_From_DE(E, E - kinetic_energy, Udens, gamma);
 #else
     Udens = -123456789;  // set to a dumb-looking number so that it's clear that it's not real when printing it
+    P     = hydro_utilities::Calc_Pressure_Conserved(E, d, mx, my, mz, gamma);
 #endif
     printf("%3d %3d %3d BC: d: %e  E:%e  P:%e  vx:%e  vy:%e  vz:%e  Uadv:%e\n", i, j, k, d, E, P, mx / d, my / d,
            mz / d, Udens);
@@ -1421,10 +1424,16 @@ __device__ bool Average_Cell_All_Fields(int i, int j, int k, int nx, int ny, int
         Real mz = conserved[grid_enum::momentum_z * ncells + idn];
         Real E  = conserved[grid_enum::Energy * ncells + idn];
 
-        // this function can NOT use the "advected internal energy field" to compute pressure when the dual energy
-        // formalism is in use. This is because the function can be invoked immediately after the flux update, but
-        // before the internal energy and total energy fields are "reconciled"
-        Real P = (E - (0.5 / d) * (mx * mx + my * my + mz * mz)) * (gamma - 1.0);
+        // this function CAN use the "advected internal energy" field to compute pressure when the dual energy
+        // formalism. This is because this function has an explicit pre-condition that this function can only
+        // be applied when the "advected internal energy" field and the "total energy" fields are properly reconciled
+#ifdef DE
+        Real P = hydro_utilities::Get_Pressure_From_DE(
+            E, E - hydro_utilities::Calc_Kinetic_Energy_From_Momentum(d, mx, my, mz),
+            conserved[grid_enum::GasEnergy * ncells + id], gamma);
+#else
+        Real P = hydro_utilities::Calc_Pressure_Conserved(E, d, mx, my, mz, gamma);
+#endif
 
 #ifdef SCALAR
         for (int n = 0; n < NSCALARS; n++) {  // NOLINT
