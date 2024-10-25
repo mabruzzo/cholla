@@ -113,6 +113,17 @@ __global__ void Select_Internal_Energy_2D(Real *dev_conserved, int nx, int ny, i
 
 __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields);
 
+/*! Returns whether a cell has crashed
+ *
+ *  \note
+ *  It probably won't come up, but it's unclear why we don't consider a density of 0 or
+ *  energy of 0 to be crashed... (I'm just keeping the logic consistent with what it used to be)
+ */
+__device__ inline bool Cell_Is_Crashed(Real density, Real Etot_density)
+{
+  return (density < 0.0) || (density != density) || (Etot_density < 0.0) || (Etot_density != Etot_density);
+}
+
 /*! \brief Overwrites the values in the specified cell with the average of all the values from the (up to) 26
  *  neighboring cells.
  *

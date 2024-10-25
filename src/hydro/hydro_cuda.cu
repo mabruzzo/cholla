@@ -381,17 +381,6 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
   }
 }
 
-/*! Returns whether a cell has crashed
- *
- *  \note
- *  It probably won't come up, but it's unclear why we don't consider a density of 0 or
- *  energy of 0 to be crashed... (I'm just keeping the logic consistent with what it used to be)
- */
-__device__ bool Cell_Is_Crashed(Real density, Real Etot_density)
-{
-  return (density < 0.0) || (density != density) || (Etot_density < 0.0) || (Etot_density != Etot_density);
-}
-
 __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off,
                                                         int y_off, int z_off, int n_ghost, Real gamma, int n_fields,
                                                         SlowCellConditionChecker slow_check, int *any_error)
