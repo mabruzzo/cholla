@@ -966,85 +966,20 @@ __global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, i
 
 __global__ void Sync_Energies_1D(Real *dev_conserved, int nx, int n_ghost, Real gamma, int n_fields)
 {
-  int id, xid, n_cells;
-  Real d, d_inv, vx, vy, vz, U;
-  n_cells = nx;
-
-  // get a global thread ID
-  id  = threadIdx.x + blockIdx.x * blockDim.x;
-  xid = id;
-
-  // threads corresponding to real cells do the calculation
-  if (xid > n_ghost - 1 && xid < nx - n_ghost) {
-    // every thread collects the conserved variables it needs from global memory
-    d     = dev_conserved[id];
-    d_inv = 1.0 / d;
-    vx    = dev_conserved[1 * n_cells + id] * d_inv;
-    vy    = dev_conserved[2 * n_cells + id] * d_inv;
-    vz    = dev_conserved[3 * n_cells + id] * d_inv;
-    U     = dev_conserved[(n_fields - 1) * n_cells + id];
-
-    // Use the previously selected Internal Energy to update the total energy
-    dev_conserved[4 * n_cells + id] = 0.5 * d * (vx * vx + vy * vy + vz * vz) + U;
-  }
+  hydro_utilities::VectorXYZ<int> grid_shape{nx, 1, 1};
+  dual_energy::Sync_Energies_Impl<1>(dev_conserved, grid_shape, n_ghost, n_fields);
 }
 
 __global__ void Sync_Energies_2D(Real *dev_conserved, int nx, int ny, int n_ghost, Real gamma, int n_fields)
 {
-  int id, xid, yid, n_cells;
-  Real d, d_inv, vx, vy, vz, U;
-  n_cells = nx * ny;
-
-  // get a global thread ID
-  int blockId = blockIdx.x + blockIdx.y * gridDim.x;
-  id          = threadIdx.x + blockId * blockDim.x;
-  yid         = id / nx;
-  xid         = id - yid * nx;
-
-  // threads corresponding to real cells do the calculation
-  if (xid > n_ghost - 1 && xid < nx - n_ghost && yid > n_ghost - 1 && yid < ny - n_ghost) {
-    // every thread collects the conserved variables it needs from global memory
-    d     = dev_conserved[id];
-    d_inv = 1.0 / d;
-    vx    = dev_conserved[1 * n_cells + id] * d_inv;
-    vy    = dev_conserved[2 * n_cells + id] * d_inv;
-    vz    = dev_conserved[3 * n_cells + id] * d_inv;
-    U     = dev_conserved[(n_fields - 1) * n_cells + id];
-
-    // Use the previously selected Internal Energy to update the total energy
-    dev_conserved[4 * n_cells + id] = 0.5 * d * (vx * vx + vy * vy + vz * vz) + U;
-  }
+  hydro_utilities::VectorXYZ<int> grid_shape{nx, ny, 1};
+  dual_energy::Sync_Energies_Impl<2>(dev_conserved, grid_shape, n_ghost, n_fields);
 }
 
 __global__ void Sync_Energies_3D(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, Real gamma, int n_fields)
 {
-  // Called in a separate kernel to avoid interfering with energy selection in
-  // Select_Internal_Energy
-
-  int id, xid, yid, zid, n_cells;
-  Real d, d_inv, vx, vy, vz, U;
-  n_cells = nx * ny * nz;
-
-  // get a global thread ID
-  id  = threadIdx.x + blockIdx.x * blockDim.x;
-  zid = id / (nx * ny);
-  yid = (id - zid * nx * ny) / nx;
-  xid = id - zid * nx * ny - yid * nx;
-
-  // threads corresponding to real cells do the calculation
-  if (xid > n_ghost - 1 && xid < nx - n_ghost && yid > n_ghost - 1 && yid < ny - n_ghost && zid > n_ghost - 1 &&
-      zid < nz - n_ghost) {
-    // every thread collects the conserved variables it needs from global memory
-    d     = dev_conserved[id];
-    d_inv = 1.0 / d;
-    vx    = dev_conserved[1 * n_cells + id] * d_inv;
-    vy    = dev_conserved[2 * n_cells + id] * d_inv;
-    vz    = dev_conserved[3 * n_cells + id] * d_inv;
-    U     = dev_conserved[(n_fields - 1) * n_cells + id];
-
-    // Use the previously selected Internal Energy to update the total energy
-    dev_conserved[4 * n_cells + id] = 0.5 * d * (vx * vx + vy * vy + vz * vz) + U;
-  }
+  hydro_utilities::VectorXYZ<int> grid_shape{nx, ny, nz};
+  dual_energy::Sync_Energies_Impl<3>(dev_conserved, grid_shape, n_ghost, n_fields);
 }
 
 #endif  // DE

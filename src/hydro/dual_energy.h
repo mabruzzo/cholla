@@ -21,6 +21,7 @@
 #define DUAL_ENERGY_H
 
 #include "../global/global.h"
+#include "../grid/grid_enum.h"
 #include "../hydro/hydro_cuda.h"
 #include "../utils/basic_structs.h"
 
@@ -181,6 +182,93 @@ __device__ void Select_Internal_Energy_Impl(Real *dev_conserved, hydro_utilities
     // since the Dual Energy condition depends on the neighbour cells
     dev_conserved[(n_fields - 1) * n_cells + id] = U;
   }
+#endif /* DE */
+}
+
+/*! Overwrites the total energy with the sum of the internal energy and the kinetic energy
+ *
+ *  This functionality **MUST** be invoke in a separate kernel from the functionality implemented by
+ *  Select_Internal_Energy in order to avoid race-conditions (the race-conditions would interfere with the energy
+ *  selection in the other function).
+ *
+ *  \tparam NDim The number of dimensions
+ *
+ #  \param[in,out] dev_conserved Pointer to the conserved quantities on the device
+ *  \param[in] grid_shape Specifies the shape of the grid (including ghost zones). Values along unused dimensions
+ *      aren't used.
+ *  \param[in] n_ghost The number of ghost zones (along each used dimension)
+ *  \param[in] n_fields The number of fields used in the current simulation.
+ *
+ *  \note
+ *  This is not technically a part of the dual energy formalism. But it is a common extension.
+ */
+template <int NDim>
+__device__ void Sync_Energies_Impl(Real *dev_conserved, hydro_utilities::VectorXYZ<int> grid_shape, int n_ghost,
+                                   int n_fields)
+{
+  static_assert((NDim == 1) || (NDim == 2) || (NDim == 3), "NDim must be 1, 2, or 3");
+
+#ifndef DE
+  printf("WARNING: this function isn't usable since Cholla wasn't compiled with Dual Energy Formalism!\n");
+
+#else
+  int id, n_cells;
+  bool is_real_cell;
+
+  // Here we branch and determine some basic details based on the number of dimensions
+  // -> for the uninitiated, the conditions of `constexpr if` statements (within templates) are evaluated
+  //    at compile time. In other words, there is no branching
+  if constexpr (NDim == 1) {
+    n_cells = grid_shape.x();
+
+    // get a global thread ID
+    id           = threadIdx.x + blockIdx.x * blockDim.x;
+    int xid      = id;
+    is_real_cell = (xid > n_ghost - 1 && xid < grid_shape.x() - n_ghost);
+
+  } else if constexpr (NDim == 2) {
+    n_cells = grid_shape.x() * grid_shape.y();
+
+    int nx = grid_shape.x();
+    int ny = grid_shape.y();
+
+    // get a global thread ID
+    int blockId  = blockIdx.x + blockIdx.y * gridDim.x;
+    id           = threadIdx.x + blockId * blockDim.x;
+    int yid      = id / nx;
+    int xid      = id - yid * nx;
+    is_real_cell = (xid > n_ghost - 1 && xid < nx - n_ghost && yid > n_ghost - 1 && yid < ny - n_ghost);
+
+  } else {  // NDim == 3
+    n_cells = grid_shape.x() * grid_shape.y() * grid_shape.z();
+
+    int nx = grid_shape.x();
+    int ny = grid_shape.y();
+    int nz = grid_shape.z();
+
+    // get a global thread ID
+    id           = threadIdx.x + blockIdx.x * blockDim.x;
+    int zid      = id / (nx * ny);
+    int yid      = (id - zid * nx * ny) / nx;
+    int xid      = id - zid * nx * ny - yid * nx;
+    is_real_cell = (xid > n_ghost - 1 && xid < nx - n_ghost && yid > n_ghost - 1 && yid < ny - n_ghost &&
+                    zid > n_ghost - 1 && zid < nz - n_ghost);
+  }
+
+  // threads corresponding to real cells do the calculation
+  if (is_real_cell) {
+    // every thread collects the conserved variables it needs from global memory
+    Real d     = dev_conserved[grid_enum::density * n_cells + id];
+    Real d_inv = 1.0 / d;
+    Real vx    = dev_conserved[grid_enum::momentum_x * n_cells + id] * d_inv;
+    Real vy    = dev_conserved[grid_enum::momentum_y * n_cells + id] * d_inv;
+    Real vz    = dev_conserved[grid_enum::momentum_z * n_cells + id] * d_inv;
+    Real U     = dev_conserved[(n_fields - 1) * n_cells + id];
+
+    // Use the previously selected Internal Energy to update the total energy
+    dev_conserved[grid_enum::Energy * n_cells + id] = 0.5 * d * (vx * vx + vy * vy + vz * vz) + U;
+  }
+
 #endif /* DE */
 }
 
