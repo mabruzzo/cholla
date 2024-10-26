@@ -391,10 +391,9 @@ void VL_Algorithm_3D_CUDA(Real *d_conserved, Real *d_grav_potential, int nx, int
   hipLaunchKernelGGL(HIP_KERNEL_NAME(dual_energy::Select_Internal_Energy<3>), de_select_launch_params.get_numBlocks(),
                      de_select_launch_params.get_threadsPerBlock(), 0, 0, dev_conserved, grid_shape, n_ghost, n_fields);
   GPU_Error_Check();
-  cuda_utilities::AutomaticLaunchParams static const de_sync_launch_params(Sync_Energies_3D, n_cells);
-  hipLaunchKernelGGL(Sync_Energies_3D, de_sync_launch_params.get_numBlocks(),
-                     de_sync_launch_params.get_threadsPerBlock(), 0, 0, dev_conserved, nx, ny, nz, n_ghost, gama,
-                     n_fields);
+  cuda_utilities::AutomaticLaunchParams static const de_sync_launch_params(dual_energy::Sync_Energies<3>, n_cells);
+  hipLaunchKernelGGL(HIP_KERNEL_NAME(dual_energy::Sync_Energies<3>), de_sync_launch_params.get_numBlocks(),
+                     de_sync_launch_params.get_threadsPerBlock(), 0, 0, dev_conserved, grid_shape, n_ghost, n_fields);
   GPU_Error_Check();
   #endif  // DE
 

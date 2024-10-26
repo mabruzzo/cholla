@@ -203,8 +203,8 @@ __global__ void Select_Internal_Energy(Real *dev_conserved, hydro_utilities::Vec
  *  This is not technically a part of the dual energy formalism. But it is a common extension.
  */
 template <int NDim>
-__device__ void Sync_Energies_Impl(Real *dev_conserved, hydro_utilities::VectorXYZ<int> grid_shape, int n_ghost,
-                                   int n_fields)
+__global__ void Sync_Energies(Real *dev_conserved, hydro_utilities::VectorXYZ<int> grid_shape, int n_ghost,
+                              int n_fields)
 {
   static_assert((NDim == 1) || (NDim == 2) || (NDim == 3), "NDim must be 1, 2, or 3");
 

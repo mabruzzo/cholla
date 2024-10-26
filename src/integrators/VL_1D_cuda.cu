@@ -129,7 +129,8 @@ void VL_Algorithm_1D_CUDA(Real *d_conserved, int nx, int x_off, int n_ghost, Rea
   hipLaunchKernelGGL(HIP_KERNEL_NAME(dual_energy::Select_Internal_Energy<1>), dimGrid, dimBlock, 0, 0, dev_conserved,
                      grid_shape, n_ghost, n_fields);
   GPU_Error_Check();
-  hipLaunchKernelGGL(Sync_Energies_1D, dimGrid, dimBlock, 0, 0, dev_conserved, nx, n_ghost, gama, n_fields);
+  hipLaunchKernelGGL(HIP_KERNEL_NAME(dual_energy::Sync_Energies<1>), dimGrid, dimBlock, 0, 0, dev_conserved, grid_shape,
+                     n_ghost, n_fields);
   GPU_Error_Check();
   #endif
 

@@ -165,7 +165,8 @@ void Simple_Algorithm_3D_CUDA(Real *d_conserved, Real *d_grav_potential, int nx,
   hipLaunchKernelGGL(HIP_KERNEL_NAME(dual_energy::Select_Internal_Energy<3>), dim1dGrid, dim1dBlock, 0, 0,
                      dev_conserved, grid_shape, n_ghost, n_fields);
   GPU_Error_Check();
-  hipLaunchKernelGGL(Sync_Energies_3D, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz, n_ghost, gama, n_fields);
+  hipLaunchKernelGGL(HIP_KERNEL_NAME(dual_energy::Sync_Energies<3>), dim1dGrid, dim1dBlock, 0, 0, dev_conserved,
+                     grid_shape, n_ghost, n_fields);
   GPU_Error_Check();
   #endif
 
