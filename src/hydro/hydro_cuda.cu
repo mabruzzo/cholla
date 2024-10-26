@@ -946,24 +946,6 @@ __global__ void Partial_Update_Advected_Internal_Energy_3D(Real *dev_conserved, 
   }
 }
 
-__global__ void Select_Internal_Energy_1D(Real *dev_conserved, int nx, int n_ghost, int n_fields)
-{
-  hydro_utilities::VectorXYZ<int> grid_shape{nx, 1, 1};
-  dual_energy::Select_Internal_Energy_Impl<1>(dev_conserved, grid_shape, n_ghost, n_fields);
-}
-
-__global__ void Select_Internal_Energy_2D(Real *dev_conserved, int nx, int ny, int n_ghost, int n_fields)
-{
-  hydro_utilities::VectorXYZ<int> grid_shape{nx, ny, 1};
-  dual_energy::Select_Internal_Energy_Impl<2>(dev_conserved, grid_shape, n_ghost, n_fields);
-}
-
-__global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields)
-{
-  hydro_utilities::VectorXYZ<int> grid_shape{nx, ny, nz};
-  dual_energy::Select_Internal_Energy_Impl<3>(dev_conserved, grid_shape, n_ghost, n_fields);
-}
-
 __global__ void Sync_Energies_1D(Real *dev_conserved, int nx, int n_ghost, Real gamma, int n_fields)
 {
   hydro_utilities::VectorXYZ<int> grid_shape{nx, 1, 1};

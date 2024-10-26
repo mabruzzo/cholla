@@ -107,12 +107,6 @@ __global__ void Partial_Update_Advected_Internal_Energy_3D(Real *dev_conserved, 
                                                            int n_ghost, Real dx, Real dy, Real dz, Real dt, Real gamma,
                                                            int n_fields);
 
-__global__ void Select_Internal_Energy_1D(Real *dev_conserved, int nx, int n_ghost, int n_fields);
-
-__global__ void Select_Internal_Energy_2D(Real *dev_conserved, int nx, int ny, int n_ghost, int n_fields);
-
-__global__ void Select_Internal_Energy_3D(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields);
-
 /*! Returns whether a cell has crashed
  *
  *  \note
