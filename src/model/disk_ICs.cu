@@ -916,10 +916,7 @@ void Grid3D::Disk_3D(Parameters p)
   //   thermal-energy-density field in the total-energy-density field (we need to
   //   add the kinetic energy contribution afterwards)
 
-  bool self_gravity = false;
-#ifdef GRAVITY
-  self_gravity = true;
-#endif
+  bool self_gravity = not p.gas_only_use_static_grav;
 
   // since we are adding contributions from the halo across the entire domain, let's initialize it
   // first (we will need to account for its influence on the radial pressure gradients when
