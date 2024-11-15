@@ -142,6 +142,8 @@ void Grid3D::Initialize(struct Parameters *P)
   }
 #endif
 
+  H.gas_only_use_static_grav = P->gas_only_use_static_grav;
+
   // Set the CFL coefficient (a global variable)
   C_cfl = 0.3;
 
@@ -415,6 +417,20 @@ void Grid3D::Execute_Hydro_Integrator(void)
   Timer.Hydro_Integrator.Start();
 #endif  // CPU_TIME
 
+  [[maybe_unused]] Real *d_Grav_potential = nullptr;
+  if (H.gas_only_use_static_grav) {
+    // this supports a crude-workaround for when we run cholla with
+    // - particles that are influenced by their own self-gravity, the gravity of the gas, and a static
+    //   analytic potential
+    // - AND we only want the gas to be influenced by the static analytic poential
+    //
+    // Be aware, STATIC_GRAV won't directly use this pointer (in fact, when STATIC_GRAV is defined, this
+    // pointer should be NULL). We should probably refactor to unify STATIC_GRAV and GRAVITY
+    d_Grav_potential = Grav.F.analytic_potential_d;
+  } else {
+    d_Grav_potential = C.d_Grav_potential;
+  }
+
   // this buffer holds 1 element that is initialized to 0
   cuda_utilities::DeviceVector<int> error_code_buffer(1, true);
 
@@ -440,13 +456,13 @@ void Grid3D::Execute_Hydro_Integrator(void)
   } else if (H.nx > 1 && H.ny > 1 && H.nz > 1)  // 3D
   {
 #ifdef VL
-    VL_Algorithm_3D_CUDA(C.device, C.d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy,
-                         H.dz, H.xbound, H.ybound, H.zbound, H.dt, H.n_fields, H.custom_grav, H.density_floor,
+    VL_Algorithm_3D_CUDA(C.device, d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy, H.dz,
+                         H.xbound, H.ybound, H.zbound, H.dt, H.n_fields, H.custom_grav, H.density_floor,
                          C.Grav_potential, SlowCellConditionChecker(1.0 / H.min_dt_slow, H.dx, H.dy, H.dz),
                          error_code_buffer.data());
 #endif  // VL
 #ifdef SIMPLE
-    Simple_Algorithm_3D_CUDA(C.device, C.d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy,
+    Simple_Algorithm_3D_CUDA(C.device, d_Grav_potential, H.nx, H.ny, H.nz, x_off, y_off, z_off, H.n_ghost, H.dx, H.dy,
                              H.dz, H.xbound, H.ybound, H.zbound, H.dt, H.n_fields, H.custom_grav, H.density_floor,
                              C.Grav_potential, SlowCellConditionChecker(1.0 / H.min_dt_slow, H.dx, H.dy, H.dz),
                              error_code_buffer.data());

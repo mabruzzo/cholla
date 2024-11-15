@@ -441,6 +441,31 @@ void Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
   parms->gamma = Real(pmap.value<double>("gamma"));
   CHOLLA_ASSERT(parms->gamma > 1.0, "gamma parameter must be greater than one.");
 
+  // Deal with the gravity.gas_only_use_static_grav parameter
+  // - it would be great to move reading of this parameter to the Gravity class (that would probably
+  //   require us to unify STATIC_GRAV and GRAVITY)
+  // - the following flag is only meaningful when GRAVITY and GRAVITY_ANALYTIC_COMP
+  //   are defined.
+  // - In other cases, we raise an error if specified without a sensible value.
+#if defined(GRAVITY) && defined(GRAVITY_ANALYTIC_COMP)
+  parms->gas_only_use_static_grav = pmap.value_or("gravity.gas_only_use_static_grav", false);
+#elif defined(GRAVITY)
+  parms->gas_only_use_static_grav = pmap.value_or("gravity.gas_only_use_static_grav", false);
+  CHOLLA_ASSERT(parms->gas_only_use_static_grav == false,
+                "It is an error to set gravity.gas_only_use_static_grav to `true` when Cholla is compiled with "
+                "GRAVITY but not GRAVITY_ANALYTIC_COMP");
+#elif defined(STATIC_GRAV)
+  parms->gas_only_use_static_grav = pmap.value_or("gravity.gas_only_use_static_grav", true);
+  CHOLLA_ASSERT(
+      parms->gas_only_use_static_grav == true,
+      "It is an error to set gravity.gas_only_use_static_grav to `true` when Cholla is compiled with STATIC_GRAV");
+#else
+  CHOLLA_ASSERT(not pmap.has_param("gravity.gas_only_use_static_grav"),
+                "it doesn't make sense to specify gravity.gas_only_use_static_grav when cholla isn't compiled "
+                "with gravity");
+  parms->gas_only_use_static_grav = false;
+#endif
+
 #ifdef TEMPERATURE_FLOOR
   if (not pmap.has_param("temperature_floor")) {
     chprintf("WARNING: parameter file doesn't include temperature_floor parameter. Defaulting to value of 0!\n");
