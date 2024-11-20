@@ -307,20 +307,6 @@ bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameter
   } else if (strcmp(name, "prng_seed") == 0) {
     parms->prng_seed = atoi(value);
 #endif  // PARTICLES
-} else if (strcmp(name, "feedback_boundary_strategy") == 0) {
-  strncpy(parms->feedback_boundary_strategy, value, MAXLEN);
-} else if (strcmp(name, "feedback_sn_model") == 0) {
-  strncpy(parms->feedback_sn_model, value, MAXLEN);
-} else if (strcmp(name, "feedback_sn_rate") == 0) {
-  strncpy(parms->feedback_sn_rate, value, MAXLEN);
-} else if (strcmp(name, "snr_filename") == 0) {
-  strncpy(parms->snr_filename, value, MAXLEN);
-#ifdef FEEDBACK
-  #ifndef NO_WIND_FEEDBACK
-  } else if (strcmp(name, "sw_filename") == 0) {
-    strncpy(parms->sw_filename, value, MAXLEN);
-  #endif
-#endif
 #ifdef ROTATED_PROJECTION
   } else if (strcmp(name, "nxr") == 0) {
     parms->nxr = atoi(value);

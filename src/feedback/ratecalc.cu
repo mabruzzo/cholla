@@ -2,17 +2,19 @@
 #include <vector>
 
 #include "../io/io.h"
+#include "../io/ParameterMap.h"
 #include "../feedback/s99table.h"
 #include "../feedback/ratecalc.h"
 
 
 
-feedback::SNRateCalc::SNRateCalc(struct Parameters& P)
+feedback::SNRateCalc::SNRateCalc(ParameterMap& pmap)
   : SNRateCalc() // the dfault constructor sets up some sensible defaults
 {
 
   chprintf("feedback::Init_State start\n");
-  std::string snr_filename(P.snr_filename);
+
+  std::string snr_filename(pmap.value_or("feedback.snr_filename", ""));
   if (snr_filename.empty()) {
     // the constant-rate configuration is handled by the default constructor for us
     chprintf("No SN rate file specified.  Using constant rate\n");
@@ -53,7 +55,7 @@ feedback::SNRateCalc::SNRateCalc(struct Parameters& P)
  *
  * @param P reference to parameters struct. Passes in starburst 99 filepath
  */
-feedback::SWRateCalc::SWRateCalc(struct Parameters& P)
+feedback::SWRateCalc::SWRateCalc( ParameterMap& P)
   : dev_sw_p_(nullptr),
     dev_sw_e_(nullptr),
     sw_dt_(0.0),
@@ -64,10 +66,8 @@ feedback::SWRateCalc::SWRateCalc(struct Parameters& P)
   return;
 #else
   chprintf("Init_Wind_State start\n");
-  std::string sw_filename(P.sw_filename);
-  if (sw_filename.empty()) {
-    CHOLLA_ERROR("must specify a stellar wind file.\n");
-  }
+  // this will produce a nicely formatted error if we forget to specify the required parameter
+  std::string sw_filename = pmap.value<std::string>("feedback.sw_filename");
 
   feedback::S99Table tab = parse_s99_table(sw_filename, feedback::S99TabKind::stellar_wind);
 

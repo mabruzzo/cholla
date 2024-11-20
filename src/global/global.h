@@ -288,15 +288,6 @@ struct Parameters {
   // machine dependent seed will be generated.
   std::uint_fast64_t prng_seed = 0;
 #endif  // PARTICLES
-char feedback_boundary_strategy[MAXLEN] = {'\0'};
-char feedback_sn_model[MAXLEN] = {'\0'};
-char feedback_sn_rate[MAXLEN] = {'\0'};
-char snr_filename[MAXLEN] = {'\0'};
-#ifdef FEEDBACK
-  #ifndef NO_WIND_FEEDBACK
-  char sw_filename[MAXLEN];
-  #endif
-#endif
 #ifdef ROTATED_PROJECTION
   // initialize rotation parameters to zero
   int nxr;

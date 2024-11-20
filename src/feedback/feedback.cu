@@ -215,7 +215,7 @@ void ClusterFeedbackMethod<FeedbackModel>::operator()(Grid3D& G)
 #endif // the ifdef statement for Particle-stuff
 }
 
-std::function<void(Grid3D&)> feedback::configure_feedback_callback(struct Parameters& P,
+std::function<void(Grid3D&)> feedback::configure_feedback_callback(struct Parameters& P, ParameterMap& pmap,
                                                                    FeedbackAnalysis& analysis)
 {
 #if !(defined(FEEDBACK) && defined(PARTICLES_GPU) && defined(PARTICLE_AGE) && defined(PARTICLE_IDS))
@@ -225,7 +225,7 @@ std::function<void(Grid3D&)> feedback::configure_feedback_callback(struct Parame
 #endif
 
   // retrieve the supernova-feedback model name
-  const std::string sn_model = P.feedback_sn_model;
+  const std::string sn_model = pmap.value_or("feedback.sn_model", "");
 
   // handle the case when there is no feedback (or if the code can't support feedback)
   if (sn_model == "none" or (sn_model.empty() and (not supports_feedback))) {
@@ -237,15 +237,14 @@ std::function<void(Grid3D&)> feedback::configure_feedback_callback(struct Parame
                  "specified when cholla has been compiled with support for feedback.");
   }
 
-
   // parse the supernova-rate-model to initialize some values
   SNRateCalc snr_calc{};
   bool use_snr_calc;
 
-  const std::string sn_rate_model = P.feedback_sn_rate;
-  if (sn_rate_model.empty() or (sn_rate_model == "table")) {
+  const std::string sn_rate_model = pmap.value_or("feedback.sn_rate", "table");
+  if (sn_rate_model == "table") {
     use_snr_calc = true;
-    snr_calc = feedback::SNRateCalc(P);
+    snr_calc = feedback::SNRateCalc(pmap);
   } else if (sn_rate_model == "immediate_sn") {
     use_snr_calc = false;
   } else {
@@ -253,11 +252,10 @@ std::function<void(Grid3D&)> feedback::configure_feedback_callback(struct Parame
   }
 
   // parse the boundary-strategy to initialize some values
-  const std::string bndy_strat_name = P.feedback_boundary_strategy;
+  // - a descriptive error is automatically produced if an error occurs
+  const std::string bndy_strat_name = pmap.value<std::string>("feedback.boundary_strategy");
   feedback_details::BoundaryStrategy bndy_strat;
-  if (bndy_strat_name.empty()) {
-    CHOLLA_ERROR("feedback_boundary_strategy was not passed an argument");
-  } else if (bndy_strat_name == "ignore_issues") {
+  if (bndy_strat_name == "ignore_issues") {
     bndy_strat = feedback_details::BoundaryStrategy::excludeGhostParticle_ignoreStencilIssues;
   } else if (bndy_strat_name == "snap") {
     bndy_strat = feedback_details::BoundaryStrategy::excludeGhostParticle_snapActiveStencil;
