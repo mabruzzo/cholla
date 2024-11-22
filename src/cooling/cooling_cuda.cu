@@ -544,6 +544,9 @@ class CoolRecipeTI
 
 std::function<void(Grid3D &)> configure_cooling_callback(std::string kind, ParameterMap &pmap)
 {
+  // the caller of this function will is responsible for raising an error when:
+  // - "chemistry.data_file" is set, but we aren't using a recipe that doesn't need a datafile
+
   // First, we configure an instance of PhotoelectricHeatingModel, based off the parameters
   // -> to help provide informative error messages, we store the names of the parameters in variables
   // -> maybe we should only use a single parameter, to just specify the value of n_av_cgs?
