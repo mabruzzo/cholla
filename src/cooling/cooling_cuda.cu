@@ -38,31 +38,23 @@ class CoolingUpdateExecutor
 {
   CoolingRecipe recipe_;
 
-  static void Cooling_Update_(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dt,
-                              Real gamma, CoolingRecipe recipe);
-
  public:
   CoolingUpdateExecutor(CoolingRecipe recipe) : recipe_(recipe) {}
 
   void operator()(Grid3D &grid) const
   {
-    Header &H = grid.H;
-    Cooling_Update_(grid.C.device, H.nx, H.ny, H.nz, H.n_ghost, H.n_fields, H.dt, gama, this->recipe_);
+    Header &H           = grid.H;
+    Real *dev_conserved = grid.C.device;
+    int n_cells         = H.nx * H.ny * H.nz;
+    int ngrid           = (n_cells + TPB - 1) / TPB;
+    dim3 dim1dGrid(ngrid, 1, 1);
+    dim3 dim1dBlock(TPB, 1, 1);
+
+    hipLaunchKernelGGL(cooling_kernel, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, H.nx, H.ny, H.nz, H.n_ghost,
+                       H.n_fields, H.dt, gama, this->recipe_);
+    GPU_Error_Check();
   }
 };
-
-template <typename CoolingRecipe>
-void CoolingUpdateExecutor<CoolingRecipe>::Cooling_Update_(Real *dev_conserved, int nx, int ny, int nz, int n_ghost,
-                                                           int n_fields, Real dt, Real gamma, CoolingRecipe recipe)
-{
-  int n_cells = nx * ny * nz;
-  int ngrid   = (n_cells + TPB - 1) / TPB;
-  dim3 dim1dGrid(ngrid, 1, 1);
-  dim3 dim1dBlock(TPB, 1, 1);
-  hipLaunchKernelGGL(cooling_kernel, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz, n_ghost, n_fields, dt,
-                     gama, recipe);
-  GPU_Error_Check();
-}
 
 /*! \fn void cooling_kernel(Real *dev_conserved, int nx, int ny, int nz, int
  n_ghost, int n_fields, Real dt, Real gamma, cudaTextureObject_t coolTexObj,
