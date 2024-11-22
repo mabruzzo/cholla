@@ -1,5 +1,41 @@
 /*! \file cooling_cuda.cu
- *  \brief Functions to calculate cooling rate for a given rho, P, dt. */
+ *  \brief Functions to calculate cooling rate for a given rho, P, dt.
+ *
+ *  Nearly all of the functionality implemented in this file follow a common
+ *  strategy. At this time of writing, there are essentially 2 functions that
+ *  deviate from the strategy (`test_cool` and `primordial_cool`), which are
+ *  left over from earlier implementations.
+ *
+ *  Interface
+ *  ---------
+ *  In detail, the `configure_cooling_callback` function produces a std::function, which serves as a callback that
+ *  performs cooling
+ *  - a `std::function` instance acts a more generalized function-pointer that is able to wrap ordinary
+ *    functions **OR** a struct that can act like a function (sometimes known as a "functor" or "callable")
+ *  - at this time, the callback will perform cooling, with specialized code based on the cooling recipe, that acts
+ *    modifies the fields tracked by a `grid` object. The actual implementation of the callback is opaque to the
+ *    rest of cholla.
+ *
+ *  Implementation Strategy
+ *  -----------------------
+ *  At this time of writing, we implement cooling functionality with some basic template-machinery
+ *  - our use of templates allows us to create optimal code for each "cooling recipe", while minimizing duplicated
+ *    code and avoiding conditional compilation with ifdef statements
+ *
+ *  Our idea revolves around the concept of a `CoolingRecipe`.
+ *  - we loosely define a `CoolingRecipe` as any type that implements a `__device__` member-function with the
+ *    `Real cool_rate(Real n, Real T)` function signature (i.e. it computes the cooling rate per unit volume at a
+ *    given number density and temperature)
+ *  - in principle, this may or may not include the effects of photoelectric heating (it may eventually make more
+ *    sense to model photoelectric heating separately)
+ *
+ *  To perform cooling with a given recipe, we an instance of the cooling_recipe to the  __global__ function,
+ * `cooling_kernel`. The concrete type of the `CoolingRecipe` is a template parameter, `cooling_kernel`, so that
+ * invocations of kernels are effectively specialized for each type of recipe.
+ *
+ *  The `CoolingUpdateExecutor` class template simply serves as a nice way to package the particular kind of
+ * CoolingRecipe (and and cooling-recipe-specific parameters) with the logic for launching `cooling_kernel`.
+ */
 
 #include <math.h>
 
@@ -508,15 +544,32 @@ class CoolRecipeTI
 
 std::function<void(Grid3D &)> configure_cooling_callback(std::string kind, ParameterMap &pmap)
 {
+  // First, we configure an instance of PhotoelectricHeatingModel, based off the parameters
+  // -> to help provide informative error messages, we store the names of the parameters in variables
+  // -> maybe we should only use a single parameter, to just specify the value of n_av_cgs?
+  const char *use_photoelectric_parname  = "chemistry.photoelectric_heating";
+  const char *photoelectric_n_av_parname = "chemistry.photoelectric_n_av_cgs";
+
   PhotoelectricHeatingModel photoelectric_fn;
-  if (pmap.value_or("chemistry.photoelectric_heating", false)) {
-    double n_av_cgs  = 100.0;  // TODO: make this configurable
+  if (pmap.value_or(use_photoelectric_parname, false)) {
+    // In this case, we want to actually use photoelectric heating
+    double n_av_cgs = pmap.value_or(photoelectric_n_av_parname, 100.0);
+    CHOLLA_ASSERT(n_av_cgs > 0.0, "The \"%s\" parameter cannot specify a non-positive value",
+                  photoelectric_n_av_parname);
     photoelectric_fn = PhotoelectricHeatingModel{n_av_cgs};
   } else {
+    CHOLLA_ASSERT(!pmap.has_param(photoelectric_n_av_parname),
+                  "It is an error to specify the \"%s\" parameter when the \"%s\" hasn't "
+                  "explicitly been set to true.",
+                  photoelectric_n_av_parname, use_photoelectric_parname);
     photoelectric_fn = PhotoelectricHeatingModel{0.0};  // this means that there isn't heating
   }
 
+  // Next, we branch based on the cooling-recipe
   if (kind == "tabulated-cloudy") {
+    // since photoelectric_fn can be configured to be inactive, we could probably just
+    // consolidate the definitions of CoolRecipeCloudyAndPhotoHeating and CoolRecipeCloudy
+
     std::string filename = pmap.value_or("chemistry.data_file", std::string());
     if (photoelectric_fn.is_active()) {
       CoolRecipeCloudyAndPhotoHeating recipe(filename, photoelectric_fn);
