@@ -585,7 +585,7 @@ std::function<void(Grid3D &)> configure_cooling_callback(std::string kind, Param
     }
   } else if (kind == "piecewise-cie") {
     CHOLLA_ASSERT(not photoelectric_fn.is_active(),
-                  "The \"%s\" cooling recipe is **NOT** compatible with photoelectric heating", kind);
+                  "The \"%s\" cooling recipe is **NOT** compatible with photoelectric heating", kind.c_str());
     CoolRecipeCIE recipe{};
     CoolingUpdateExecutor<CoolRecipeCIE> updater(recipe);
     return {updater};
