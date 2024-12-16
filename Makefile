@@ -91,7 +91,7 @@ ifeq ($(findstring -DPARIS,$(DFLAGS)),-DPARIS)
     CXXFLAGS += -I$(NVIDIAMATH_ROOT)/include
     GPUFLAGS += -I$(NVIDIAMATH_ROOT)/include
     LIBS += -L$(NVIDIAMATH_ROOT)/lib64 -lcufft
-  #else
+  else
     LIBS += -lcufft
   endif
   ifeq ($(findstring -DGRAVITY_5_POINTS_GRADIENT,$(DFLAGS)),-DGRAVITY_5_POINTS_GRADIENT)
