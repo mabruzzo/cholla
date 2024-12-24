@@ -35,6 +35,7 @@ void Particles3D::Load_Particles_Data(struct Parameters *P)
   // Every process reads the same file
   const std::string base_fname =
       ("ics_" + std::to_string((int)P->tile_length / 1000) + "Mpc_" + std::to_string(G.nx_local) + "_particles.h5");
+  const int nfile              = P->nfile;  // output step you want to read from
     #else
   const int nfile              = P->nfile;  // output step you want to read from
   const std::string base_fname = (std::to_string(nfile) + "_particles.h5." + std::to_string(procID));

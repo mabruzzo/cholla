@@ -2272,8 +2272,10 @@ void Grid3D::Read_Grid(struct Parameters P)
 // for now assumes you will run on the same number of processors
 #ifdef MPI_CHOLLA
   #ifdef TILED_INITIAL_CONDITIONS
-  sprintf(filename, "%sics_%dMpc_%d.h5", P.indir, (int)P.tile_length / 1000,
+  char buffer[1024];
+  sprintf(buffer, "%sics_%dMpc_%d.h5", P.indir, (int)P.tile_length / 1000,
           H.nx_real);  // Everyone reads the same file
+  filename = buffer;
   #else                // TILED_INITIAL_CONDITIONS is not defined
   filename += "." + std::to_string(procID);
   #endif               // TILED_INITIAL_CONDITIONS

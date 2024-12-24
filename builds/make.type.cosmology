@@ -3,6 +3,12 @@ include builds/make.type.particles
 # Solve the equation of motion (Particles and Hydro) on a comoving frame
 DFLAGS += -DCOSMOLOGY
 
+DFLAGS += -DSET_MPI_GRID
+
+DFLAGS += -DTILED_INITIAL_CONDITIONS
+
+# Measure the Timing of the different stages
+DFLAGS    += -DCPU_TIME
 
 # Use Grackle for cooling and chemistry in cosmological simulations
 #DFLAGS += -DCOOLING_GRACKLE -DOUTPUT_TEMPERATURE -DOUTPUT_CHEMISTRY -DN_OMP_THREADS_GRACKLE=$(OMP_NUM_THREADS)
