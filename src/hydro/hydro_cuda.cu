@@ -703,14 +703,16 @@ void Temperature_Ceiling(Real *dev_conserved, int nx, int ny, int nz, int n_ghos
   }
 }
 
-__device__ Real SlowCellConditionChecker::max_dti_if_slow(Real E, Real d, Real d_inv, Real vx, Real vy, Real vz,
+__device__ Real SlowCellConditionChecker::max_dti_if_slow(Real total_energy, Real density, Real density_inv,
+                                                          Real velocity_x, Real velocity_y, Real velocity_z,
                                                           Real gamma) const
 {
 #ifndef AVERAGE_SLOW_CELLS
   return -1.0;
 #else
-  Real max_dti = hydroInverseCrossingTime(E, d, d_inv, vx, vy, vz, dx, dy, dz, gamma);
-  return (max_dti > max_dti_slow) ? max_dti : -1.0;
+  Real max_dti = hydroInverseCrossingTime(total_energy, density, density_inv, velocity_x, velocity_y, velocity_z,
+                                          this->dx, this->dy, this->dz, gamma);
+  return (max_dti > this->max_dti_slow) ? max_dti : -1.0;
 #endif
 }
 
@@ -762,7 +764,7 @@ __global__ void Average_Slow_Cells_3D(Real *dev_conserved, int nx, int ny, int n
     // (if the cell doesn't meet the threshold, a negative value is returned instead)
     max_dti = slow_check.max_dti_if_slow(E, d, d_inv, vx, vy, vz, gamma);
 
-    if (max_dti >= 0) {
+    if (max_dti > 0) {
       speed  = sqrt(vx * vx + vy * vy + vz * vz);
       temp   = (gamma - 1) * (E - 0.5 * (speed * speed) * d) * ENERGY_UNIT / (d * DENSITY_UNIT / 0.6 / MP) / KB;
       P      = (E - 0.5 * d * (vx * vx + vy * vy + vz * vz)) * (gamma - 1.0);
