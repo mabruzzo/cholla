@@ -61,6 +61,8 @@ __inline__ __device__ Real blockReduceMax(Real val)
   int lane   = threadIdx.x % warpSize;  // thread ID within the warp,
   int warpId = threadIdx.x / warpSize;  // ID of the warp itself
 
+  printf("pre-warp reduction: (%d %d) - %e\n", threadIdx.x, blockIdx.x, val);
+
   val = warpReduceMax(val);  // Each warp performs partial reduction
 
   if (lane == 0) {
@@ -69,12 +71,16 @@ __inline__ __device__ Real blockReduceMax(Real val)
 
   __syncthreads();  // Wait for all partial reductions
 
+  printf("post-warp reduction: (%d %d) - %e\n", threadIdx.x, blockIdx.x, val); 
+
   // read from shared memory only if that warp existed
   val = (threadIdx.x < blockDim.x / warpSize) ? shared[lane] : 0;
 
   if (warpId == 0) {
     val = warpReduceMax(val);
   }  // Final reduce within first warp
+
+  printf("after final reduce within first warp: (%d %d) - %e\n", threadIdx.x, blockIdx.x, val); 
 
   return val;
 }
