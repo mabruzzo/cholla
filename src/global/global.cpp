@@ -103,10 +103,10 @@ char *Trim(char *s)
 
 // NOLINTNEXTLINE(cert-err58-cpp)
 // NOLINTNEXTLINE(*)
-const std::set<std::string> optionalParams = {
-    "flag_delta", "ddelta_dt",     "n_delta",      "Lz",          "Lx",       "phi",      "theta",   "delta",
-    "nzr",        "nxr",           "H0",           "Omega_M",     "Omega_L",  "Omega_R",  "Omega_K", "w0",
-    "wa",         "Init_redshift", "End_redshift", "tile_length", "n_proc_x", "n_proc_y", "n_proc_z"};  // NOLINT
+const std::set<std::string> optionalParams = {"flag_delta",   "ddelta_dt",  "n_delta", "Lz",  "Lx", "phi",
+                                              "theta",        "delta",      "nzr",     "nxr", "H0", "Omega_M",
+                                              "Omega_L",      "Omega_R",    "Omega_K", "w0",  "wa", "Init_redshift",
+                                              "End_redshift", "tile_length"};  // NOLINT
 
 bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameters *parms);
 
@@ -341,15 +341,6 @@ bool Old_Style_Parse_Param(const char *name, const char *value, struct Parameter
     parms->tile_length = atof(value);
 #endif  // TILED_INITIAL_CONDITIONS
 
-#ifdef SET_MPI_GRID
-    // Set the MPI Processes grid [n_proc_x, n_proc_y, n_proc_z]
-  } else if (strcmp(name, "n_proc_x") == 0) {
-    parms->n_proc_x = atoi(value);
-  } else if (strcmp(name, "n_proc_y") == 0) {
-    parms->n_proc_y = atoi(value);
-  } else if (strcmp(name, "n_proc_z") == 0) {
-    parms->n_proc_z = atoi(value);
-#endif
   } else if (strcmp(name, "bc_potential_type") == 0) {
     parms->bc_potential_type = atoi(value);
 #ifdef SCALAR
@@ -389,11 +380,24 @@ static void Load_String_Param_Into_Char_Buffer(ParameterMap &pmap, const std::st
  */
 void Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
 {
-  // load the domain dimensions (abort with an error if one of these is missing)
-  parms->nx = pmap.value<int>("nx");
-  parms->ny = pmap.value<int>("ny");
-  parms->nz = pmap.value<int>("nz");
-  CHOLLA_ASSERT((parms->nx >= 0) and (parms->ny >= 0) and (parms->nz >= 0), "domain dimensions must be positive");
+  // Set the MPI Processes grid [n_proc_x, n_proc_y, n_proc_z]
+  if (pmap.has_param("n_proc_x") or pmap.has_param("n_proc_y") or pmap.has_param("n_proc_z")) {
+    parms->n_proc_x = pmap.value<int>("n_proc_x");
+    parms->n_proc_y = pmap.value<int>("n_proc_y");
+    parms->n_proc_z = pmap.value<int>("n_proc_z");
+    CHOLLA_ASSERT((parms->n_proc_x > 0) and (parms->n_proc_y > 0) and (parms->n_proc_z > 0),
+                  "When specified, n_proc_x, n_proc_y, and n_proc_z must be positive");
+    // the following check also implicitly ensures that n_proc_[xyz] are all 1 without MPI
+    int product = parms->n_proc_x * parms->n_proc_y * parms->n_proc_z;
+    CHOLLA_ASSERT(product == nproc,
+                  "The product of n_proc_x, n_proc_y, and n_proc_z is %d. It doesn't match the "
+                  "number of processes, %d",
+                  product, nproc);
+  } else {
+    parms->n_proc_x = 0;
+    parms->n_proc_y = 0;
+    parms->n_proc_z = 0;
+  }
 
 #ifdef STATIC_GRAV
   parms->custom_grav = pmap.value_or("custom_grav", 0);
@@ -467,6 +471,7 @@ void Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
   Load_String_Param_Into_Char_Buffer(pmap, "skewersdir", parms->skewersdir, nullptr);
   #endif
 #endif
+
 
 #ifdef TEMPERATURE_FLOOR
   if (not pmap.has_param("temperature_floor")) {
