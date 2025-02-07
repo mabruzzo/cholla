@@ -472,7 +472,6 @@ void Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
   #endif
 #endif
 
-
 #ifdef TEMPERATURE_FLOOR
   if (not pmap.has_param("temperature_floor")) {
     chprintf("WARNING: parameter file doesn't include temperature_floor parameter. Defaulting to value of 0!\n");
