@@ -53,7 +53,7 @@ pipeline
                                 source builds/run_tests.sh
                                 setupTests -c gcc -t ${CHOLLA_MAKE_TYPE}
 
-                                buildCholla OPTIMIZE
+                                buildCholla DEBUG
                                 '''
                         }
                     }
