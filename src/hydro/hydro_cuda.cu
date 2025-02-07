@@ -564,11 +564,19 @@ __global__ void Calc_dt_3D(Real *dev_conserved, Real *dev_dti, Real gamma, int n
 #else   // not MHD
       max_dti = fmax(max_dti, hydroInverseCrossingTime(E, d, d_inv, vx, vy, vz, dx, dy, dz, gamma));
 #endif  // MHD
+
+      if (id == 0) {
+        printf("max_dti (pre reduction): %e\n", max_dti);
+      }
     }
   }
 
   // do the grid wide reduction (find the max inverse timestep in the grid)
   reduction_utilities::gridReduceMax(max_dti, dev_dti);
+
+  if ((threadIdx.x == 0) && (blockIdx.x == 0)) {
+    printf("post reduction dev_dti: %e\n", *dev_dti);
+  }
 }
 
 Real Calc_dt_GPU(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields, Real dx, Real dy, Real dz,
