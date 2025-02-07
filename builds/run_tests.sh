@@ -189,8 +189,7 @@ runTests ()
                   "--machine" "${CHOLLA_MACHINE}"
                   "--mpi-launcher" "${CHOLLA_LAUNCH_COMMAND[@]}")
 
-  #GTEST_FILTER="--gtest_filter=*tALL*:*t${CHOLLA_MAKE_TYPE^^}*"
-  GTEST_FILTER="--gtest_filter=tHYDROCalcDt3D.CorrectInputExpectCorrectOutput"
+  GTEST_FILTER="--gtest_filter=*tALL*:*t${CHOLLA_MAKE_TYPE^^}*"
   GTEST_REPORT="--gtest_output=xml:${CHOLLA_ROOT}/bin/"
 
   builtin cd $CHOLLA_ROOT

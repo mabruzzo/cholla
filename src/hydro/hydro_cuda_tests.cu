@@ -52,6 +52,12 @@ TEST(tHYDROCalcDt3D, CorrectInputExpectCorrectOutput)
   host_conserved.at(3) = 0.0;  // z momentum
   host_conserved.at(4) = 1.0;  // Energy
 
+  printf("host input density: %e\n", host_conserved.at(0));
+  printf("host input x-momentum: %e\n", host_conserved.at(1));
+  printf("host input y-momentum: %e\n", host_conserved.at(2));
+  printf("host input z-momentum: %e\n", host_conserved.at(3));
+  printf("host input energy: %e\n", host_conserved.at(4));
+
   // Copy host data to device arrray
   dev_conserved.cpyHostToDevice(host_conserved);
   //__global__ void Calc_dt_3D(Real *dev_conserved, Real *dev_dti, Real gamma,

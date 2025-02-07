@@ -521,6 +521,10 @@ __global__ void Calc_dt_3D(Real *dev_conserved, Real *dev_dti, Real gamma, int n
 
   n_cells = nx * ny * nz;
 
+  if ((threadIdx.x == 0) && (blockIdx.x == 0)) {
+    printf("device gamma: %e\n", gamma);
+  }
+
   // Grid stride loop to perform as much of the reduction as possible. The
   // fact that `id` has type `size_t` is important. I'm not totally sure why
   // but setting it to int results in some kind of silent over/underflow issue
@@ -541,6 +545,13 @@ __global__ void Calc_dt_3D(Real *dev_conserved, Real *dev_dti, Real gamma, int n
       vy    = dev_conserved[2 * n_cells + id] * d_inv;
       vz    = dev_conserved[3 * n_cells + id] * d_inv;
       E     = dev_conserved[4 * n_cells + id];
+      if (id == 0) {
+        printf("device d: %e\n", d);
+        printf("device vx: %e\n", vx);
+        printf("device vy: %e\n", vy);
+        printf("device vy: %e\n", vz);
+        printf("device E: %e\n", E); 
+      }
 
 // Compute the maximum inverse crossing time in the cell
 #ifdef MHD
