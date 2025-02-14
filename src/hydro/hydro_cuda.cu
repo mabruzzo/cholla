@@ -382,14 +382,10 @@ __global__ void Update_Conserved_Variables_3D(Real *dev_conserved, Real *Q_Lx, R
 }
 
 /*! Returns whether a cell has crashed
- *
- *  \note
- *  It probably won't come up, but it's unclear why we don't consider a density of 0 or
- *  energy of 0 to be crashed... (I'm just keeping the logic consistent with what it used to be)
  */
 __device__ bool Cell_Is_Crashed(Real density, Real Etot_density)
 {
-  return (density < 0.0) || (density != density) || (Etot_density < 0.0) || (Etot_density != Etot_density);
+  return (density <= 0.0) || (density != density) || (Etot_density < 0.0) || (Etot_density != Etot_density);
 }
 
 __global__ void PostUpdate_Conserved_Correct_Crashed_3D(Real *dev_conserved, int nx, int ny, int nz, int x_off,
@@ -1293,12 +1289,19 @@ void Apply_Temperature_Floor(Real *dev_conserved, int nx, int ny, int nz, int n_
   //  number of threads per 1D block
   dim3 dim1dBlock(TPB, 1, 1);
 
+  cuda_utilities::DeviceVector<int> counter(1, true);
+  int *dev_counter = counter.data();
+
   hipLaunchKernelGGL(Temperature_Floor_Kernel, dim1dGrid, dim1dBlock, 0, 0, dev_conserved, nx, ny, nz, n_ghost,
-                     n_fields, U_floor);
+                     n_fields, U_floor, dev_counter);
+  int host_counter = counter[0];
+  if (host_counter > 0) {
+    printf("HYDRO WARNING: Temperature Floor applied to num_cells: %d \n", host_counter);
+  }
 }
 
 __global__ void Temperature_Floor_Kernel(Real *dev_conserved, int nx, int ny, int nz, int n_ghost, int n_fields,
-                                         Real U_floor)
+                                         Real U_floor, int *counter)
 {
   int id, xid, yid, zid, n_cells;
   Real d, d_inv, vx, vy, vz, E, Ekin, Udens;
@@ -1340,8 +1343,9 @@ __global__ void Temperature_Floor_Kernel(Real *dev_conserved, int nx, int ny, in
 #endif
 
     if (num_applications > 0) {
-      printf("T_Floor %3d %3d %3d d: %e spec_Ekin:%e spec_eint_floor: %e BC: E_dens:%e GasEnergy_dens:%e\n", xid, yid,
-             zid, d, Ekin, U_floor, E, Udens);
+      atomicAdd(counter, 1);
+      // printf("T_Floor %3d %3d %3d d: %e spec_Ekin:%e spec_eint_floor: %e BC: E_dens:%e GasEnergy_dens:%e\n", xid,
+      //        yid, zid, d, Ekin, U_floor, E, Udens);
     }
   }
 }
