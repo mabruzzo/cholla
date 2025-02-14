@@ -442,7 +442,7 @@ void Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
   // were specified (& there were no default values). Now cosmological simulations will loudly fail if a user forgets
   // one of these parameters (other that wa, which defaults to 0).
 #ifdef COSMOLOGY
-  Load_String_Param_Into_Char_Buffer(pmap, "UVB_rates_file", parms->UVB_rates_file, nullptr);
+  Load_String_Param_Into_Char_Buffer(pmap, "scale_outputs_file", parms->scale_outputs_file, "");
   parms->Init_redshift = pmap.value<double>("Init_redshift");
   parms->End_redshift  = pmap.value<double>("End_redshift");
   parms->H0            = pmap.value<double>("H0");
@@ -455,7 +455,7 @@ void Init_Param_Struct_Members(ParameterMap &pmap, struct Parameters *parms)
 #endif  // COSMOLOGY
 
 #if defined(CHEMISTRY_GPU) || defined(COOLING_GRACKLE)
-  Load_String_Param_Into_Char_Buffer(pmap, "scale_outputs_file", parms->scale_outputs_file, "");
+  Load_String_Param_Into_Char_Buffer(pmap, "UVB_rates_file", parms->UVB_rates_file, nullptr);
 #endif
 
   // we should probably revisit this section and come up with different default behaviors.
