@@ -31,7 +31,8 @@ TEST(tHYDROCalcDt3D, CorrectInputExpectCorrectOutput)
   // Call the function we are testing
   int num_blocks = 1;
   dim3 dim1dGrid(num_blocks, 1, 1);
-  dim3 dim1dBlock(TPB, 1, 1);
+  printf("default TPB: %d\n", TPB);
+  dim3 dim1dBlock(1, 1, 1);
   int const nx       = 1;
   int const ny       = 1;
   int const nz       = 1;
