@@ -42,7 +42,7 @@ TEST(tHYDROCalcDt3D, CorrectInputExpectCorrectOutput)
   Real dz            = 1.0;
   std::vector<Real> host_conserved(n_fields);
   cuda_utilities::DeviceVector<Real> dev_conserved(n_fields);
-  cuda_utilities::DeviceVector<Real> dev_dti(1);
+  cuda_utilities::DeviceVector<Real> dev_dti(1, true);
   Real gamma = 5.0 / 3.0;
 
   // Set values of conserved variables for input (host)
