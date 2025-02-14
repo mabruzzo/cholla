@@ -466,6 +466,7 @@ __global__ void Calc_dt_1D(Real *dev_conserved, Real *dev_dti, Real gamma, int n
     }
   }
 
+  bool debug = (nx == 1);
   // do the grid wide reduction (find the max inverse timestep in the grid)
   reduction_utilities::gridReduceMax(max_dti, dev_dti);
 }
@@ -506,7 +507,7 @@ __global__ void Calc_dt_2D(Real *dev_conserved, Real *dev_dti, Real gamma, int n
       max_dti = fmax(max_dti, fmax((fabs(vx) + cs) / dx, (fabs(vy) + cs) / dy));
     }
   }
-
+  bool debug = (nx == 1) && (ny == 1);
   // do the grid wide reduction (find the max inverse timestep in the grid)
   reduction_utilities::gridReduceMax(max_dti, dev_dti);
 }
@@ -571,8 +572,10 @@ __global__ void Calc_dt_3D(Real *dev_conserved, Real *dev_dti, Real gamma, int n
     }
   }
 
+  bool debug = (nx == 1) && (ny == 1) && (nz == 1);
+
   // do the grid wide reduction (find the max inverse timestep in the grid)
-  reduction_utilities::gridReduceMax(max_dti, dev_dti);
+  reduction_utilities::gridReduceMax(max_dti, dev_dti, debug);
 
   if ((threadIdx.x == 0) && (blockIdx.x == 0)) {
     printf("post reduction dev_dti: %e\n", *dev_dti);

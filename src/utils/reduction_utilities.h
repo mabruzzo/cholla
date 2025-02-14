@@ -52,7 +52,7 @@ __inline__ __device__ Real warpReduceMax(Real val)
  * the block
  * \return Real The maximum value of `val` within the block
  */
-__inline__ __device__ Real blockReduceMax(Real val)
+__inline__ __device__ Real blockReduceMax(Real val,bool debug_kernel = false)
 {
   // Shared memory for storing the results of each warp-wise partial
   // reduction
@@ -61,26 +61,45 @@ __inline__ __device__ Real blockReduceMax(Real val)
   int lane   = threadIdx.x % warpSize;  // thread ID within the warp,
   int warpId = threadIdx.x / warpSize;  // ID of the warp itself
 
-  printf("pre-warp reduction: (%d %d) - %e\n", threadIdx.x, blockIdx.x, val);
+  if (debug_kernel) {
+    printf("blockReduceMax (%d, %d): at startup, maxWarpsPerBlock=%d, lane = %d, warpId =%d, val = %e\n",
+           threadIdx.x, blockIdx.x, (int)(::maxWarpsPerBlock), lane, warpId, val);
+  }
 
   val = warpReduceMax(val);  // Each warp performs partial reduction
 
+  if (debug_kernel) {
+    printf("blockReduceMax (%d, %d): after warpReduceMax, val = %e\n",
+           threadIdx.x, blockIdx.x, val);
+  }
+
   if (lane == 0) {
     shared[warpId] = val;
+    if (debug_kernel) {
+      printf("blockReduceMax (%d, %d): wrote val to shared\n", threadIdx.x, blockIdx.x);
+    }
   }  // Write reduced value to shared memory
 
   __syncthreads();  // Wait for all partial reductions
 
-  printf("post-warp reduction: (%d %d) - %e\n", threadIdx.x, blockIdx.x, val); 
-
   // read from shared memory only if that warp existed
   val = (threadIdx.x < blockDim.x / warpSize) ? shared[lane] : 0;
 
+  if (debug_kernel && (threadIdx.x < blockDim.x / warpSize)) {
+    printf("blockReduceMax (%d, %d): read %e from shared (threads without this message use a value of 0)\n", threadIdx.x, blockIdx.x, val); 
+  }
+
   if (warpId == 0) {
+
     val = warpReduceMax(val);
+    if (debug_kernel) {
+      printf("blockReduceMax (%d, %d): after calling warpReduceMax a second time, val = %e\n", threadIdx.x, blockIdx.x, val);
+    }
   }  // Final reduce within first warp
 
-  printf("after final reduce within first warp: (%d %d) - %e\n", threadIdx.x, blockIdx.x, val); 
+  if (debug_kernel) {
+    printf("blockReduceMax (%d, %d): returning %e\n", threadIdx.x, blockIdx.x, val);
+  }
 
   return val;
 }
@@ -277,10 +296,10 @@ inline __device__ double atomicMinBits(double* address, double val)
  * \param[out] out The pointer to where to store the reduced scalar value
  * in device memory
  */
-__inline__ __device__ void gridReduceMax(Real val, Real* out)
+__inline__ __device__ void gridReduceMax(Real val, Real* out, bool debug_kernel = false)
 {
   // Reduce the entire block in parallel
-  val = blockReduceMax(val);
+  val = blockReduceMax(val, debug_kernel);
 
   // Write block level reduced value to the output scalar atomically
   if (threadIdx.x == 0) {
