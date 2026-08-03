@@ -22,6 +22,7 @@
 #include "../utils/hydro_utilities.h"
 #include "../utils/math_utilities.h"
 #include "../utils/mhd_utilities.h"
+#include "../utils/gpu.hpp"
 
 /*! Set the initial conditions based on info in the parameters structure. */
 void Grid3D::Set_Initial_Conditions(Parameters P, const ParameterMap &pmap)
@@ -101,6 +102,24 @@ void Grid3D::Set_Initial_Conditions(Parameters P, const ParameterMap &pmap)
 
   if (C.device != NULL) {
     GPU_Error_Check(cudaMemcpy(C.device, C.density, H.n_fields * H.n_cells * sizeof(Real), cudaMemcpyHostToDevice));
+
+    int n_cells = H.n_cells;
+    int n_ghost = H.n_ghost;
+    int nx = H.nx;
+    int ny = H.ny;
+    int nz = H.nz;
+    Real* ptr = C.device;
+
+    auto fn = GPU_LAMBDA(int i, int j, int k) {
+      if ((i == n_ghost) && (j == n_ghost) && (k == n_ghost)) {
+        int id = i + j * H.nx + k * H.nx * H.ny;
+        Real density = ptr[grid_enum::density * n_cells + id];
+        Real passive_scalar = ptr[grid_enum::basic_scalar * n_cells + id];
+        printf("at (i,j,k) = (%d, %d, %d): d = %g basic_scalar = %g\n",
+               i, j, k, density, passive_scalar);
+      }
+    };
+    gpuFor(nx, ny, nz, fn);
   }
 }
 
@@ -228,6 +247,10 @@ void Grid3D::Constant(Parameters const &P)
 #ifdef DE
           C.GasEnergy[id] = P.P / (gama - 1.0);
 #endif  // DE
+
+#if defined(SCALAR) && defined(BASIC_SCALAR)
+          C.basic_scalar[id] = C.density[id] * 0.5;
+#endif
         }
         if (i == istart && j == jstart && k == kstart) {
           n = P.rho * DENSITY_UNIT / (mu * MP);
