@@ -89,15 +89,16 @@ Real Grid3D::Calc_Inverse_Timestep()
 /*! \fn Grid3D(void)
  *  \brief Constructor for the Grid. */
 Grid3D::Grid3D(Parameters &P)
-#ifndef RT
-    : field_info_(FieldInfo::create())
-#else
+#ifdef RT
     // it's ok to pass in `this->H` to the constructor of `Rad3D` since `Rad3D`'s
     // constructor is only registering a reference to `this->H` for later usage.
     // TODO: initialize `this->H` before passing it to `Rad3D`
-    : field_info_(FieldInfo::create()), Rad(this->H)
+    : Rad(this->H)
 #endif
 {
+  // in the future, we may want to pass in a FieldInfo object as an argument
+  FieldInfo my_field_info = FieldInfo::create();
+
 // set number of ghost cells
 #ifdef PCM
   H.n_ghost = 2;
@@ -118,7 +119,7 @@ Grid3D::Grid3D(Parameters &P)
   H.n_ghost++;
 #endif  // MHD
 
-  H.n_fields = field_info_.n_fields();
+  H.n_fields = my_field_info.n_fields();
 
   int nx_in = P.nx;
   int ny_in = P.ny;
@@ -219,6 +220,8 @@ Grid3D::Grid3D(Parameters &P)
 
 #endif
 
+  field_manager_.emplace(std::move(my_field_info), std::array<int, 3>{{H.nx_real, H.ny_real, H.nz_real}}, H.n_ghost);
+
   // allocate memory
   AllocateMemory();
 }
@@ -303,6 +306,18 @@ void Grid3D::AllocateMemory(void)
   for (int i = 0; i < H.n_fields * H.n_cells; i++) {
     C.host[i] = 0.0;
   }
+}
+
+FieldManager &Grid3D::field_manager()
+{
+  if (field_manager_.has_value()) return *field_manager_;
+  CHOLLA_ERROR("FieldManager isn't initialized yet!");
+}
+
+const FieldManager &Grid3D::field_manager() const
+{
+  if (field_manager_.has_value()) return *field_manager_;
+  CHOLLA_ERROR("FieldManager isn't initialized yet!");
 }
 
 /*! \fn void set_dt(Real dti)
