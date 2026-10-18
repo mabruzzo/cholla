@@ -99,9 +99,6 @@ Grid3D::Grid3D(Parameters &P)
   // set initialization flag to 0
   flag_init = 0;
 
-  // in the future, we may want to pass in a FieldInfo object as an argument
-  FieldInfo my_field_info = FieldInfo::create();
-
 // set number of ghost cells
 #ifdef PCM
   H.n_ghost = 2;
@@ -121,6 +118,9 @@ Grid3D::Grid3D(Parameters &P)
   // Set the number of ghost cells high enough for MHD. MHD needs one extra for the left most face
   H.n_ghost++;
 #endif  // MHD
+
+  // in the future, we may want to pass in a FieldInfo object as an argument
+  FieldInfo my_field_info = FieldInfo::create(H.n_ghost);
 
   std::optional<uint8_t> maybe_conserved_pack_id = my_field_info.pack_id("conserved");
   if (!maybe_conserved_pack_id.has_value()) {
@@ -236,7 +236,7 @@ Grid3D::Grid3D(Parameters &P)
 
 #endif
 
-  field_manager_.emplace(std::move(my_field_info), std::array<int, 3>{{H.nx_real, H.ny_real, H.nz_real}}, H.n_ghost);
+  field_manager_.emplace(std::move(my_field_info), std::array<int, 3>{{H.nx_real, H.ny_real, H.nz_real}});
 
   // allocate memory and copy pointer addresses from field_manager_
   AllocateMemory();
