@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
   G.Initialize_Models(pmap);
 
 #ifdef RT
-  G.Rad.Initialize_Start(P);
+  G.Rad.Initialize_Start(P, G.field_manager());
 #endif
 
   // Set initial conditions
