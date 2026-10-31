@@ -122,7 +122,11 @@ Grid3D::Grid3D(Parameters &P)
   H.n_ghost++;
 #endif  // MHD
 
-  H.n_fields = my_field_info.n_fields();
+  std::optional<uint8_t> maybe_conserved_pack_id = my_field_info.pack_id("conserved");
+  if (!maybe_conserved_pack_id.has_value()) {
+    CHOLLA_ERROR("error looking up the number of conserved fields\n");
+  }
+  H.n_fields = my_field_info.n_fields(maybe_conserved_pack_id.value());
 
   int nx_in = P.nx;
   int ny_in = P.ny;
@@ -307,7 +311,10 @@ void Grid3D::AllocateMemory(void)
   // fluid fields into the the members of this->C
   populate_conserved_fields_(*this, field_manager(), MemSpace::DEV);
   // todo: do we want to make sure every field is initialized to 0? If so, we should do
-  //       this when actually allocating memory
+  //       this when actually allocating memory/
+  printf("n_fields:%d\n", H.n_fields);
+  printf("nx = %d, ny = %d, nz = %d\n", H.nx, H.ny, H.nz);
+  printf("H.n_cells = %d\n", H.n_fields);
   cuda_utilities::initGpuMemory(C.device, H.n_fields * H.n_cells * sizeof(Real));
 
 #if defined(GRAVITY)
